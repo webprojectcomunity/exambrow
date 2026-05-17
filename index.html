@@ -55,8 +55,10 @@ button:hover {
 #exam-popup {
     display: none;
     position: fixed;
-    top:0; left:0;
-    width:100%; height:100%;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
     background:white;
 }
 
@@ -64,6 +66,13 @@ iframe {
     width:100%;
     height:100%;
     border:none;
+}
+
+/* INFO SISWA */
+#info-siswa {
+    font-size: 13px;
+    margin-bottom: 10px;
+    color: #333;
 }
 </style>
 </head>
@@ -81,6 +90,9 @@ iframe {
 
 <!-- ================= TOKEN ================= -->
 <div id="login-container" class="box" style="display:none;">
+
+    <div id="info-siswa"></div>
+
     <h3>Masukkan Token</h3>
     <input type="text" id="token-input" placeholder="Masukkan token">
     <button onclick="verifikasiToken()">Mulai Ujian</button>
@@ -101,18 +113,13 @@ let FORM_LINK = "";
 // ================= LOAD DATA =================
 window.onload = function () {
 
-    // jika sudah isi identitas sebelumnya
-    if (localStorage.getItem("nama")) {
-        tampilToken();
-    }
-
+    // ambil setting server
     fetch(API_URL + "?action=latest")
     .then(res => res.json())
     .then(data => {
 
         console.log("DATA SERVER:", data);
 
-        // 🔥 NORMALISASI TOKEN (ANTI ERROR)
         VALID_TOKEN = (data.token || "")
             .toString()
             .trim()
@@ -120,22 +127,27 @@ window.onload = function () {
             .toLowerCase();
 
         FORM_LINK = data.formLink || "";
-
         document.getElementById("gform-iframe").src = FORM_LINK;
 
-        // background dari admin
         if (data.background) {
             document.body.style.background =
                 `url(${data.background}) no-repeat center center fixed`;
             document.body.style.backgroundSize = "cover";
         }
 
-    })
-    .catch(err => {
-        console.error("Gagal load:", err);
-        alert("Gagal mengambil data server!");
     });
 
+    // ================= FLOW LOGIN =================
+    const nama = localStorage.getItem("nama");
+    const nis = localStorage.getItem("nis");
+    const kelas = localStorage.getItem("kelas");
+
+    if (nama && nis && kelas) {
+        tampilToken();
+    } else {
+        document.getElementById("identitas-box").style.display = "block";
+        document.getElementById("login-container").style.display = "none";
+    }
 };
 
 // ================= SIMPAN IDENTITAS =================
@@ -159,8 +171,15 @@ function simpanIdentitas() {
 
 // ================= TAMPIL TOKEN =================
 function tampilToken() {
+
     document.getElementById("identitas-box").style.display = "none";
     document.getElementById("login-container").style.display = "block";
+
+    // tampilkan identitas siswa
+    document.getElementById("info-siswa").innerHTML =
+        "Nama: " + localStorage.getItem("nama") + "<br>" +
+        "NIS: " + localStorage.getItem("nis") + "<br>" +
+        "Kelas: " + localStorage.getItem("kelas");
 }
 
 // ================= VERIFIKASI TOKEN =================
@@ -172,9 +191,6 @@ function verifikasiToken() {
         .replace(/\s+/g, "")
         .toLowerCase();
 
-    console.log("INPUT:", inputToken);
-    console.log("VALID:", VALID_TOKEN);
-
     if (inputToken === VALID_TOKEN) {
 
         kirimDataSiswa(inputToken);
@@ -182,7 +198,7 @@ function verifikasiToken() {
         document.getElementById("login-container").style.display = "none";
         document.getElementById("exam-popup").style.display = "block";
 
-        // fullscreen aman
+        // fullscreen
         document.documentElement.requestFullscreen()
             .catch(() => {});
 
@@ -196,7 +212,7 @@ function kirimDataSiswa(token) {
 
     const formData = new URLSearchParams();
 
-    formData.append("action", "add_siswa"); // 🔥 HARUS INI
+    formData.append("action", "add_siswa");
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("kelas", localStorage.getItem("kelas"));
