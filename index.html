@@ -180,17 +180,14 @@ let batasTinggiMinimal = 0;
 // --- METHOD: SOUND ALERT ENGINE (WEB AUDIO API) ---
 function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
     try {
-        // Inisialisasi Audio Context bawaan browser secara real-time
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
 
-        oscillator.type = "sine"; // Jenis gelombang suara standar (jernih dan menusuk)
-        oscillator.frequency.value = frekuensi; // Frekuensi Hz (semakin tinggi, semakin melengking)
+        oscillator.type = "sine";
+        oscillator.frequency.value = frekuensi;
         
-        // Atur kontrol volume utama (1 = 100%)
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-        // Efek transisi linear menurun agar suara tidak menghasilkan letupan statis di akhir (fade-out)
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durasi / 1000);
 
         oscillator.connect(gainNode);
@@ -199,19 +196,18 @@ function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + durasi / 1000);
     } catch (e) {
-        console.error("Gagal memicu osilator audio otomatis. Diblokir kebijakan privasi browser.", e);
+        console.error("Gagal memicu osilator audio otomatis.", e);
     }
 }
 
-// Fungsi untuk membuat alarm bip beruntun (Double Beep efek kepanikan)
 function picuAlarmKecurangan() {
-    mainkanSuaraBip(250, 1100); // Bip pertama
+    mainkanSuaraBip(250, 1100);
     setTimeout(() => {
-        mainkanSuaraBip(450, 1300); // Bip kedua lebih tinggi dan panjang
+        mainkanSuaraBip(450, 1300);
     }, 300);
 }
 
-// --- METHOD: LOAD CONFIG UTAMA ---
+// --- METHOD: LOAD CONFIG UTAMA & CEK STATUS BLOKIR ---
 window.addEventListener("DOMContentLoaded", function () {
     
     const cachedBg = localStorage.getItem("cached_background");
@@ -220,11 +216,10 @@ window.addEventListener("DOMContentLoaded", function () {
         document.body.style.backgroundSize = "cover";
     }
 
+    // Ambil parameter konfigurasi terbaru dari server
     fetch(API_URL + "?action=latest")
     .then(res => res.json())
     .then(data => {
-        console.log("DATA SERVER:", data);
-
         VALID_TOKEN = (data.token || "").toString().trim().replace(/\s+/g, "").toLowerCase();
         FORM_LINK = data.formLink || "";
 
@@ -241,6 +236,12 @@ window.addEventListener("DOMContentLoaded", function () {
         }
 
         DATA_LOADED = true;
+        
+        // Setelah config siap, jika siswa sudah login, langsung validasi status ke server
+        const nis = localStorage.getItem("nis");
+        if (nis) {
+            periksaStatusServer(nis);
+        }
     })
     .catch(err => {
         console.error("Gagal sinkronisasi data:", err);
@@ -259,6 +260,40 @@ window.addEventListener("DOMContentLoaded", function () {
     }
 });
 
+// --- METHOD: PERIKSA STATUS AKTIF/BLOKIR DARI GOOGLE SHEET ---
+function periksaStatusServer(nis) {
+    fetch(`${API_URL}?action=check_status&nis=${nis}`)
+    .then(res => res.json())
+    .then(res => {
+        const inputToken = document.getElementById("token-input");
+        const btnLogin = document.getElementById("btn-login-token"); // Pastikan ID tombol ini sesuai di HTML Anda
+
+        if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
+            // Simpan status blokir secara lokal agar awet saat di-refresh
+            localStorage.setItem("is_blocked", "true");
+            
+            // Kunci komponen input token
+            if (inputToken) {
+                inputToken.disabled = true;
+                inputToken.value = "";
+                inputToken.placeholder = "AKSES DIKUNCI - HUBUNGI PENGAWAS";
+            }
+            if (btnLogin) btnLogin.disabled = true;
+            
+            alert("Akses Anda sedang dinonaktifkan/diblokir oleh pengawas. Silakan melapor.");
+        } else {
+            // Jika status di sheet adalah "Aktif", bersihkan status blokir lokal
+            localStorage.removeItem("is_blocked");
+            if (inputToken) {
+                inputToken.disabled = false;
+                inputToken.placeholder = "Masukkan Token Ujian";
+            }
+            if (btnLogin) btnLogin.disabled = false;
+        }
+    })
+    .catch(err => console.error("Gagal memeriksa status siswa:", err));
+}
+
 // --- METHOD: MANAGEMEN USER ---
 function simpanIdentitas() {
     const nama = document.getElementById("nama").value.trim();
@@ -275,6 +310,7 @@ function simpanIdentitas() {
     localStorage.setItem("kelas", kelas);
 
     tampilToken();
+    periksaStatusServer(nis); // Langsung cek status ke sheet setelah input identitas
 }
 
 function tampilToken() {
@@ -285,6 +321,15 @@ function tampilToken() {
         "<strong>Nama:</strong> " + localStorage.getItem("nama") + "<br>" +
         "<strong>NIS:</strong> " + localStorage.getItem("nis") + "<br>" +
         "<strong>Kelas:</strong> " + localStorage.getItem("kelas");
+        
+    // Cek apakah ada record blokir lokal sebelum melakukan pengecekan server
+    if (localStorage.getItem("is_blocked") === "true") {
+        const inputToken = document.getElementById("token-input");
+        if (inputToken) {
+            inputToken.disabled = true;
+            inputToken.placeholder = "AKSES DIKUNCI - HUBUNGI PENGAWAS";
+        }
+    }
 }
 
 function verifikasiToken() {
@@ -293,27 +338,44 @@ function verifikasiToken() {
         return;
     }
 
-    const inputToken = document.getElementById("token-input").value
-        .toString().trim().replace(/\s+/g, "").toLowerCase();
-
-    if (inputToken === VALID_TOKEN) {
-        kirimDataSiswa(inputToken);
-
-        document.getElementById("login-container").style.display = "none";
-        document.getElementById("exam-popup").style.display = "block";
-
-        // Ambil data resolusi asli screen user sesaat sebelum fullscreen diaktifkan
-        // Memberikan toleransi penyusutan maksimal 15% dari ukuran asli window
-        const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
-        const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
-        batasLebarMinimal = lebarAsli * 0.85;
-        batasTinggiMinimal = tinggiAsli * 0.85;
-
-        ujianBerjalan = true;
-        masukFullscreen();
-    } else {
-        alert("Token salah!");
+    if (localStorage.getItem("is_blocked") === "true") {
+        alert("Akses Anda terkunci. Silakan minta pengawas untuk mengaktifkan status Anda terlebih dahulu.");
+        return;
     }
+
+    const nis = localStorage.getItem("nis");
+    
+    // Validasi ulang secara real-time ke server sebelum mengizinkan masuk
+    fetch(`${API_URL}?action=check_status&nis=${nis}`)
+    .then(res => res.json())
+    .then(res => {
+        if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
+            localStorage.setItem("is_blocked", "true");
+            tampilToken();
+            alert("Gagal masuk. Status Anda terdeteksi tidak aktif di database.");
+            return;
+        }
+
+        const inputToken = document.getElementById("token-input").value
+            .toString().trim().replace(/\s+/g, "").toLowerCase();
+
+        if (inputToken === VALID_TOKEN) {
+            kirimDataSiswa(inputToken);
+
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("exam-popup").style.display = "block";
+
+            const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
+            const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
+            batasLebarMinimal = lebarAsli * 0.85;
+            batasTinggiMinimal = tinggiAsli * 0.85;
+
+            ujianBerjalan = true;
+            masukFullscreen();
+        } else {
+            alert("Token salah!");
+        }
+    });
 }
 
 function kirimDataSiswa(token) {
@@ -342,7 +404,7 @@ function masukFullscreen() {
 
 // --- SYSTEM LOGIC: ANTI-CURANG TINGKAT TINGGI ---
 
-// 1. Monitor Perpindahan Fokus / Aplikasi / Minimize Tab (Basic Backgrounding)
+// 1. Monitor Perpindahan Fokus / Aplikasi / Minimize Tab
 document.addEventListener("visibilitychange", function() {
     if (document.hidden && ujianBerjalan) {
         catatPelanggaran("Terdeteksi meminimalkan halaman, membuka aplikasi lain, atau berpindah tab!");
@@ -359,26 +421,23 @@ function checkFullscreenExit() {
 document.addEventListener('fullscreenchange', checkFullscreenExit);
 document.addEventListener('webkitfullscreenchange', checkFullscreenExit);
 
-// 3. SENSOR ANTI SPLIT SCREEN: Deteksi Penyusutan Rasio Viewport Jendela secara Real-Time
+// 3. SENSOR ANTI SPLIT SCREEN
 window.addEventListener('resize', function() {
     if (!ujianBerjalan || sedangMemulihkanFullscreen) return;
 
     let lebarSekarang = window.innerWidth || document.documentElement.clientWidth;
     let tinggiSekarang = window.innerHeight || document.documentElement.clientHeight;
 
-    // Jika dimensi menyusut di bawah batas toleransi, artinya ada pembagian window layar
     if (lebarSekarang < batasLebarMinimal || tinggiSekarang < batasTinggiMinimal) {
         catatPelanggaran("Terdeteksi pembagian layar (Split Screen) atau pengecilan area kerja browser!");
     }
 });
 
-// 4. SENSOR ANTI DUAL MONITOR & FLOATING APPS: Deteksi Kehilangan Fokus Utama Jendela Aplikasi
+// 4. SENSOR ANTI DUAL MONITOR & FLOATING APPS
 window.addEventListener('blur', function() {
     if (!ujianBerjalan) return;
 
-    // Berikan jeda toleransi pendek (400ms) untuk validasi posisi fokus kursor aktif
     setTimeout(() => {
-        // Jika jendela blur dan fokus element saat ini BUKAN iFrame Google Form, maka dipastikan kursor mengeklik monitor lain / aplikasi sekunder
         if (document.activeElement !== document.getElementById("gform-iframe")) {
             catatPelanggaran("Fokus layar hilang! Dilarang berinteraksi dengan layar kedua atau jendela aplikasi lain.");
         }
@@ -390,8 +449,6 @@ function catatPelanggaran(alasan) {
     if (!ujianBerjalan) return;
     
     batasPelanggaran--;
-    
-    // Picu alarm suara bip melengking sesaat setelah kecurangan terekam
     picuAlarmKecurangan();
     
     if (batasPelanggaran > 0) {
@@ -408,7 +465,6 @@ function tutupModalPeringatan() {
     sedangMemulihkanFullscreen = true; 
     masukFullscreen();
     
-    // Perbarui penyesuaian baseline ukuran resolusi pasca transisi modal
     setTimeout(() => { 
         const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
         const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
@@ -423,8 +479,10 @@ function portalTerkunci() {
     ujianBerjalan = false;
     window.onbeforeunload = null; 
     
-    // Bunyikan alarm bip panjang penanda diskualifikasi
     mainkanSuaraBip(1200, 1500);
+    
+    // Set flag terblokir permanen di browser lokal siswa
+    localStorage.setItem("is_blocked", "true");
 
     const formData = new URLSearchParams();
     formData.append("action", "blokir_siswa");
@@ -433,20 +491,19 @@ function portalTerkunci() {
     formData.append("alasan", "Kecurangan Layar Ganda / Split-Screen / Kehilangan Fokus Berulang");
 
     fetch(API_URL, { method: "POST", body: formData })
+    .then(() => {
+        // Balikkan halaman ke tampilan input token yang sekarang sudah terkunci
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        }
+        document.getElementById('exam-popup').innerHTML = '';
+        document.getElementById('exam-popup').style.display = 'none';
+        
+        // Reset input token dan bekukan kolomnya
+        tampilToken();
+        alert("Akses Anda telah diblokir secara permanen! Halaman dikembalikan ke menu awal.");
+    })
     .catch(err => console.error("Gagal kirim log blokir:", err));
-
-    document.getElementById('exam-popup').innerHTML = '';
-    document.getElementById('exam-popup').style.display = 'none';
-    document.getElementById('identitas-box').style.display = 'none';
-    
-    document.getElementById('login-container').innerHTML = `
-        <h2 style="color: red; font-size: 24px; margin-top: 20px;">AKSES ANDA DIBLOKIR</h2>
-        <p style="font-size: 16px; color: #333;">Sistem mendeteksi pemisahan layar atau interaksi luar aplikasi secara berulang.</p>
-        <p style="font-weight: bold; color: #dc3545;">Ujian Anda telah dihentikan secara otomatis.</p>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 14px; color: #666;">Silakan menghadap Pengawas untuk membuka blokir.</p>
-    `;
-    document.getElementById('login-container').style.display = 'block';
 }
 
 // --- METHOD: SELESAI MANUAL ---
@@ -493,6 +550,5 @@ window.onbeforeunload = function() {
         return "Ujian sedang berlangsung! Riwayat pengerjaan Anda berisiko hilang.";
     }
 };
-</script>
-</body>
+</script></body>
 </html>
