@@ -131,6 +131,37 @@ function portalTerkunci() {
     `;
 }
 
+//================TOMBOL KELUR=====================
+
+function konfirmasiSelesai() {
+    const yakin = confirm("Apakah kamu yakin sudah menyelesaikan ujian?");
+
+    if (yakin) {
+        akhiriUjian();
+    }
+}
+
+function akhiriUjian() {
+    ujianBerjalan = false;
+
+    // Keluar fullscreen jika masih aktif
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    }
+
+    // Sembunyikan halaman ujian
+    document.getElementById('exam-popup').innerHTML = '';
+    document.getElementById('exam-popup').style.display = 'none';
+
+    // Tampilkan pesan selesai
+    document.getElementById('login-container').innerHTML = `
+        <h2 style="color: green;">UJIAN SELESAI</h2>
+        <p>Terima kasih, jawaban Anda telah dikumpulkan.</p>
+        <p>Silakan menunggu instruksi dari pengawas.</p>
+    `;
+    document.getElementById('login-container').style.display = 'block';
+}
+
 // ================= BLOKIR KEY =================
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && ['c','v','u','s'].includes(e.key)) {
