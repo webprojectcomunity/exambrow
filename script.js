@@ -1,9 +1,32 @@
-const VALID_TOKEN = "UJIAN123";
-let batasPelanggaran = 3;
+let VALID_TOKEN = "";
+let FORM_LINK = "";
 let ujianBerjalan = false;
+let batasPelanggaran = 3;
 
+// ================= AMBIL DATA DARI SPREADSHEET =================
+fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec")
+.then(res => res.json())
+.then(data => {
+    VALID_TOKEN = data.token;
+    FORM_LINK = data.formLink;
+
+    // Set iframe
+    document.getElementById("gform-iframe").src = FORM_LINK;
+
+    // Set background
+    if (data.background) {
+        document.body.style.backgroundImage = `url(${data.background})`;
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundPosition = "center";
+    }
+})
+.catch(err => {
+    console.error("Gagal load data:", err);
+});
+
+// ================= LOGIN TOKEN =================
 function verifikasiToken() {
-    let inputToken = document.getElementById('token-input').value.trim();
+    const inputToken = document.getElementById('token-input').value.trim();
 
     if (inputToken === VALID_TOKEN) {
         document.getElementById('login-container').style.display = 'none';
@@ -15,53 +38,42 @@ function verifikasiToken() {
     }
 }
 
+// ================= FULLSCREEN =================
 function masukFullscreen() {
     let elem = document.documentElement;
+
     if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(()=>{});
+        elem.requestFullscreen().catch(() => {});
     } else if (elem.webkitRequestFullscreen) {
         elem.webkitRequestFullscreen();
     }
 }
 
-// ================== ANTI CURANG (UPGRADE) ==================
-
-// A. Deteksi pindah tab / aplikasi
-document.addEventListener("visibilitychange", () => {
+// ================= ANTI CURANG =================
+document.addEventListener("visibilitychange", function() {
     if (document.hidden && ujianBerjalan) {
-        catatPelanggaran("Keluar dari halaman / buka aplikasi lain!");
+        catatPelanggaran("Keluar dari halaman terdeteksi!");
     }
 });
 
-// B. Deteksi kehilangan fokus (klik address bar / menu)
-window.addEventListener("blur", () => {
+window.addEventListener("blur", function() {
     if (ujianBerjalan) {
         setTimeout(() => {
             if (document.activeElement !== document.getElementById("gform-iframe")) {
-                catatPelanggaran("Mencoba pindah fokus / buka tab!");
+                catatPelanggaran("Pindah fokus layar terdeteksi!");
             }
         }, 300);
     }
 });
 
-// C. Keluar fullscreen
-document.addEventListener("fullscreenchange", () => {
+document.addEventListener('fullscreenchange', function() {
     if (!document.fullscreenElement && ujianBerjalan) {
         catatPelanggaran("Keluar dari fullscreen!");
     }
 });
 
-document.addEventListener("webkitfullscreenchange", () => {
-    if (!document.webkitFullscreenElement && ujianBerjalan) {
-        catatPelanggaran("Keluar fullscreen (iOS)!");
-    }
-});
-
-// ================== SISTEM PELANGGARAN ==================
-
+// ================= SISTEM PELANGGARAN =================
 function catatPelanggaran(alasan) {
-    if (!ujianBerjalan) return;
-
     batasPelanggaran--;
 
     if (batasPelanggaran > 0) {
@@ -69,8 +81,6 @@ function catatPelanggaran(alasan) {
         document.getElementById('modal-chance').innerText = batasPelanggaran;
         document.getElementById('custom-modal').style.display = 'flex';
     } else {
-        ujianBerjalan = false;
-        document.getElementById('custom-modal').style.display = 'none';
         portalTerkunci();
     }
 }
@@ -80,25 +90,23 @@ function tutupModalPeringatan() {
     masukFullscreen();
 }
 
+// ================= BLOKIR =================
 function portalTerkunci() {
+    ujianBerjalan = false;
+
     document.getElementById('exam-popup').innerHTML = '';
     document.getElementById('exam-popup').style.display = 'none';
 
     document.getElementById('login-container').innerHTML = `
-        <h2 style="color:red;">AKSES DIBLOKIR</h2>
-        <p>Anda terdeteksi melakukan pelanggaran berulang.</p>
+        <h2 style="color:red">AKSES DIBLOKIR</h2>
+        <p>Anda terdeteksi curang.</p>
     `;
-    document.getElementById('login-container').style.display = 'block';
 }
 
-// Blok shortcut
-document.addEventListener("keydown", e => {
-    if (e.ctrlKey && ['c','v','u','s'].includes(e.key)) e.preventDefault();
-    if (e.key === "F12") e.preventDefault();
-});
-
-window.onbeforeunload = () => {
-    if (ujianBerjalan) {
-        return "Ujian sedang berlangsung!";
+// ================= BLOKIR KEY =================
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && ['c','v','u','s'].includes(e.key)) {
+        e.preventDefault();
     }
-};
+    if (e.key === 'F12') e.preventDefault();
+});
