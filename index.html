@@ -1,156 +1,184 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Ujian Online - Google Form Terproteksi</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Ujian</title>
 
-        #login-container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 85%;
-        }
+<style>
+body {
+    font-family: Arial;
+    background: #f4f4f9;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
 
-        input {
-            padding: 12px;
-            font-size: 16px;
-            margin-bottom: 15px;
-            width: 80%;
-            text-align: center;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+.box {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
 
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
 
-        #end-exam-btn {
+button {
+    padding: 10px;
+    width: 95%;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#exam-popup {
+    display: none;
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 10005;
-    background-color: #ffc107;
-    color: black;
-    font-weight: bold;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-}
-#end-exam-btn:hover {
-    background-color: #e0a800;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:white;
 }
 
-        button:hover { background-color: #218838; }
-
-        #exam-popup {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: white;
-            z-index: 9999;
-        }
-
-        iframe {
-            border: none;
-            width: 100%;
-            height: 100%;
-        }
-
-        #refullscreen-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 10005;
-            background-color: #dc3545;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-
-        #custom-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 10010;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            text-align: center;
-            max-width: 400px;
-            width: 80%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-
-        .modal-content h3 { color: #dc3545; margin-top: 0; }
-
-        .modal-content button { background-color: #007bff; margin-top: 15px; }
-
-        .modal-content button:hover { background-color: #0069d9; }
-
-        .no-select {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-    </style>
+iframe {
+    width:100%;
+    height:100%;
+    border:none;
+}
+</style>
 </head>
 
-<body class="no-select" oncontextmenu="return false;"> 
+<body>
 
-<div id="login-container">
-    <h2>Masukkan Token Ujian</h2>
-    <input type="text" id="token-input" placeholder="CONTOH: UJIAN123">
-    <br>
+<!-- IDENTITAS -->
+<div id="identitas-box" class="box">
+    <h3>Identitas Siswa</h3>
+    <input type="text" id="nama" placeholder="Nama">
+    <input type="text" id="nis" placeholder="NIS">
+    <input type="text" id="kelas" placeholder="Kelas">
+    <button onclick="simpanIdentitas()">Lanjutkan</button>
+</div>
+
+<!-- TOKEN -->
+<div id="login-container" class="box" style="display:none;">
+    <h3>Masukkan Token</h3>
+    <input type="text" id="token-input">
     <button onclick="verifikasiToken()">Mulai Ujian</button>
 </div>
 
+<!-- UJIAN -->
 <div id="exam-popup">
-   <button id="end-exam-btn" onclick="konfirmasiSelesai()">Akhiri Ujian</button>
-
-    <iframe 
-        id="gform-iframe"
-        src="https://docs.google.com/forms/d/e/1FAIpQLSf6YGA3jar4D4W6_ATzUP7HncdW9bpPw8xh4ou0uBDRfA7V4g/viewform?usp=header" 
-        sandbox="allow-forms allow-scripts allow-same-origin allow-popups">
-    </iframe>
+    <iframe id="gform-iframe"></iframe>
 </div>
 
-<div id="custom-modal">
-    <div class="modal-content">
-        <h3>PERINGATAN PELANGGARAN!</h3>
-        <p id="modal-message"></p>
-        <p><strong>Sisa kesempatan: <span id="modal-chance">3</span></strong></p>
-        <button onclick="tutupModalPeringatan()">Saya Mengerti</button>
-    </div>
-</div>
+<script>
 
-<script src="script.js"></script>
+const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
+
+let VALID_TOKEN = "";
+let FORM_LINK = "";
+
+// ================= LOAD =================
+window.onload = function () {
+
+    if (localStorage.getItem("nama")) {
+        tampilToken();
+    }
+
+    fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
+
+        VALID_TOKEN = (data.token || "").trim().toLowerCase();
+        FORM_LINK = data.formLink || "";
+
+        document.getElementById("gform-iframe").src = FORM_LINK;
+
+        if (data.background) {
+            document.body.style.background =
+                `url(${data.background}) no-repeat center center fixed`;
+            document.body.style.backgroundSize = "cover";
+        }
+
+    });
+
+};
+
+// ================= IDENTITAS =================
+function simpanIdentitas() {
+
+    const nama = document.getElementById("nama").value.trim();
+    const nis = document.getElementById("nis").value.trim();
+    const kelas = document.getElementById("kelas").value.trim();
+
+    if (!nama || !nis || !kelas) {
+        alert("Lengkapi semua data!");
+        return;
+    }
+
+    localStorage.setItem("nama", nama);
+    localStorage.setItem("nis", nis);
+    localStorage.setItem("kelas", kelas);
+
+    tampilToken();
+}
+
+// ================= TAMPIL TOKEN =================
+function tampilToken() {
+    document.getElementById("identitas-box").style.display = "none";
+    document.getElementById("login-container").style.display = "block";
+}
+
+// ================= VERIFIKASI =================
+function verifikasiToken() {
+
+    const inputToken = document.getElementById("token-input").value
+        .trim()
+        .toLowerCase();
+
+    if (inputToken === VALID_TOKEN) {
+
+        kirimDataSiswa(inputToken);
+
+        document.getElementById("login-container").style.display = "none";
+        document.getElementById("exam-popup").style.display = "block";
+
+        document.documentElement.requestFullscreen();
+
+    } else {
+        alert("Token salah!");
+    }
+}
+
+// ================= SIMPAN KE SHEET =================
+function kirimDataSiswa(token) {
+
+    const formData = new URLSearchParams();
+
+    formData.append("action", "siswa");
+    formData.append("nama", localStorage.getItem("nama"));
+    formData.append("nis", localStorage.getItem("nis"));
+    formData.append("kelas", localStorage.getItem("kelas"));
+    formData.append("token", token);
+
+    fetch(API_URL, {
+        method: "POST",
+        body: formData
+    });
+}
+
+</script>
+
 </body>
 </html>
