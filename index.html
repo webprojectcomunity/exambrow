@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portal Ujian</title>
+<title>Portal Ujian Terproteksi</title>
 
 <style>
 body {
@@ -14,6 +14,8 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 /* BOX CONTAINER */
@@ -145,7 +147,6 @@ iframe {
 <!-- ================= STAGE 3: HALAMAN UJIAN (IFRAME) ================= -->
 <div id="exam-popup">
     <iframe id="gform-iframe" allow="fullscreen"></iframe>
-    <!-- Tombol Selesai Ujian -->
     <button id="btn-selesai" onclick="konfirmasiSelesai()">Selesai Ujian</button>
 </div>
 
@@ -172,17 +173,19 @@ let ujianBerjalan = false;
 let batasPelanggaran = 3;
 let sedangMemulihkanFullscreen = false;
 
+// Variabel Baseline untuk Rekaman Dimensi Layar Aman
+let batasLebarMinimal = 0;
+let batasTinggiMinimal = 0;
+
 // --- METHOD: LOAD CONFIG UTAMA ---
 window.addEventListener("DOMContentLoaded", function () {
     
-    // Optimasi Pemuatan Background Instan via Cache LocalStorage
     const cachedBg = localStorage.getItem("cached_background");
     if (cachedBg) {
         document.body.style.background = `url(${cachedBg}) no-repeat center center fixed`;
         document.body.style.backgroundSize = "cover";
     }
 
-    // Tarik konfigurasi terbaru dari Google Web Apps
     fetch(API_URL + "?action=latest")
     .then(res => res.json())
     .then(data => {
@@ -210,7 +213,6 @@ window.addEventListener("DOMContentLoaded", function () {
         alert("Gagal mengambil data dari server! Periksa kembali jaringan internet.");
     });
 
-    // Validasi Sesi Login Menggunakan LocalStorage
     const nama = localStorage.getItem("nama");
     const nis = localStorage.getItem("nis");
     const kelas = localStorage.getItem("kelas");
@@ -261,11 +263,17 @@ function verifikasiToken() {
         .toString().trim().replace(/\s+/g, "").toLowerCase();
 
     if (inputToken === VALID_TOKEN) {
-        // Daftarkan siswa ke log database absensi sheet
         kirimDataSiswa(inputToken);
 
         document.getElementById("login-container").style.display = "none";
         document.getElementById("exam-popup").style.display = "block";
+
+        // Ambil data resolusi asli screen user sesaat sebelum fullscreen diaktifkan
+        // Memberikan toleransi penyusutan maksimal 15% dari ukuran asli window
+        const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
+        const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
+        batasLebarMinimal = lebarAsli * 0.85;
+        batasTinggiMinimal = tinggiAsli * 0.85;
 
         ujianBerjalan = true;
         masukFullscreen();
@@ -298,9 +306,9 @@ function masukFullscreen() {
     }
 }
 
-// --- SYSTEM LOGIC: ANTI-CURANG ---
+// --- SYSTEM LOGIC: ANTI-CURANG TINGKAT TINGGI ---
 
-// 1. Monitor Perpindahan Fokus / Aplikasi / Minimize Tab
+// 1. Monitor Perpindahan Fokus / Aplikasi / Minimize Tab (Basic Backgrounding)
 document.addEventListener("visibilitychange", function() {
     if (document.hidden && ujianBerjalan) {
         catatPelanggaran("Terdeteksi meminimalkan halaman, membuka aplikasi lain, atau berpindah tab!");
@@ -308,20 +316,42 @@ document.addEventListener("visibilitychange", function() {
 });
 
 // 2. Monitor Paksa Keluar Mode Layar Penuh (Fullscreen)
-document.addEventListener('fullscreenchange', function() {
-    if (sedangMemulihkanFullscreen) return; 
-    if (!document.fullscreenElement && ujianBerjalan) {
+function checkFullscreenExit() {
+    if (sedangMemulihkanFullscreen) return;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && ujianBerjalan) {
         catatPelanggaran("Terdeteksi keluar dari mode layar penuh (Fullscreen)!");
     }
-});
-document.addEventListener('webkitfullscreenchange', function() {
-    if (sedangMemulihkanFullscreen) return;
-    if (!document.webkitFullscreenElement && ujianBerjalan) {
-        catatPelanggaran("Terdeteksi keluar dari mode layar penuh!");
+}
+document.addEventListener('fullscreenchange', checkFullscreenExit);
+document.addEventListener('webkitfullscreenchange', checkFullscreenExit);
+
+// 3. SENSOR ANTI SPLIT SCREEN: Deteksi Penyusutan Rasio Viewport Jendela secara Real-Time
+window.addEventListener('resize', function() {
+    if (!ujianBerjalan || sedangMemulihkanFullscreen) return;
+
+    let lebarSekarang = window.innerWidth || document.documentElement.clientWidth;
+    let tinggiSekarang = window.innerHeight || document.documentElement.clientHeight;
+
+    // Jika dimensi menyusut di bawah batas toleransi, artinya ada pembagian window layar
+    if (lebarSekarang < batasLebarMinimal || tinggiSekarang < batasTinggiMinimal) {
+        catatPelanggaran("Terdeteksi pembagian layar (Split Screen) atau pengecilan area kerja browser!");
     }
 });
 
-// 3. Proses Validasi Hitung Pelanggaran Sisa Kesempatan
+// 4. SENSOR ANTI DUAL MONITOR & FLOATING APPS: Deteksi Kehilangan Fokus Utama Jendela Aplikasi
+window.addEventListener('blur', function() {
+    if (!ujianBerjalan) return;
+
+    // Berikan jeda toleransi pendek (400ms) untuk validasi posisi fokus kursor aktif
+    setTimeout(() => {
+        // Jika jendela blur dan fokus element saat ini BUKAN iFrame Google Form, maka dipastikan kursor mengeklik monitor lain / aplikasi sekunder
+        if (document.activeElement !== document.getElementById("gform-iframe")) {
+            catatPelanggaran("Fokus layar hilang! Dilarang berinteraksi dengan layar kedua atau jendela aplikasi lain.");
+        }
+    }, 400);
+});
+
+// 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan
 function catatPelanggaran(alasan) {
     if (!ujianBerjalan) return;
     
@@ -340,10 +370,18 @@ function tutupModalPeringatan() {
     document.getElementById('custom-modal').style.display = 'none';
     sedangMemulihkanFullscreen = true; 
     masukFullscreen();
-    setTimeout(() => { sedangMemulihkanFullscreen = false; }, 500);
+    
+    // Perbarui penyesuaian baseline ukuran resolusi pasca transisi modal
+    setTimeout(() => { 
+        const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
+        const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
+        batasLebarMinimal = lebarAsli * 0.85;
+        batasTinggiMinimal = tinggiAsli * 0.85;
+        sedangMemulihkanFullscreen = false; 
+    }, 600);
 }
 
-// 4. Eksekusi Sanksi Penguncian & Kirim Sinyal Blokir Ke Server GAS
+// 6. Eksekusi Sanksi Penguncian & Kirim Sinyal Blokir Ke Server GAS
 function portalTerkunci() {
     ujianBerjalan = false;
     window.onbeforeunload = null; 
@@ -352,7 +390,7 @@ function portalTerkunci() {
     formData.append("action", "blokir_siswa");
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("nama", localStorage.getItem("nama"));
-    formData.append("alasan", "Kecurangan berulang (Keluar aplikasi/Layar Penuh)");
+    formData.append("alasan", "Kecurangan Layar Ganda / Split-Screen / Kehilangan Fokus Berulang");
 
     fetch(API_URL, { method: "POST", body: formData })
     .catch(err => console.error("Gagal kirim log blokir:", err));
@@ -363,7 +401,7 @@ function portalTerkunci() {
     
     document.getElementById('login-container').innerHTML = `
         <h2 style="color: red; font-size: 24px; margin-top: 20px;">AKSES ANDA DIBLOKIR</h2>
-        <p style="font-size: 16px; color: #333;">Sistem mendeteksi tindakan kecurangan berulang kali.</p>
+        <p style="font-size: 16px; color: #333;">Sistem mendeteksi pemisahan layar atau interaksi luar aplikasi secara berulang.</p>
         <p style="font-weight: bold; color: #dc3545;">Ujian Anda telah dihentikan secara otomatis.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 14px; color: #666;">Silakan menghadap Pengawas untuk membuka blokir.</p>
