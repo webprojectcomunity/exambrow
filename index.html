@@ -47,6 +47,20 @@
             font-weight: bold;
         }
 
+        #end-exam-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10005;
+    background-color: #ffc107;
+    color: black;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+#end-exam-btn:hover {
+    background-color: #e0a800;
+}
+
         button:hover { background-color: #218838; }
 
         #exam-popup {
@@ -119,7 +133,7 @@
 </div>
 
 <div id="exam-popup">
-    <button id="refullscreen-btn" onclick="masukFullscreen()">Kembali Layar Penuh</button>
+   <button id="end-exam-btn" onclick="konfirmasiSelesai()">Akhiri Ujian</button>
 
     <iframe 
         id="gform-iframe"
