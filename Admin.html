@@ -233,6 +233,54 @@ const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV
 let base64Image = "";
 let editRow = null;
 
+// ================= AMBIL DATA UTAMA DARI SERVER =================
+async function loadData() {
+    const tableBody = document.getElementById("tableBody");
+    
+    try {
+        const res = await fetch(`${API_URL}?action=all`);
+        const data = await res.json();
+
+        if (data.error) {
+            tableBody.innerHTML = `<tr><td colspan="6" style="color:red;">Error: ${data.error}</td></tr>`;
+            return;
+        }
+
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6">Belum ada data konfigurasi ujian di server.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = "";
+        data.forEach(item => {
+            const bgDisplay = item.background 
+                ? `<a href="${item.background}" target="_blank"><img src="${item.background}" alt="BG"></a>` 
+                : `<span style="color:#999; font-style:italic;">Default</span>`;
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><strong>${item.mapel}</strong></td>
+                <td>${item.durasi}</td>
+                <td><code style="background:#eee; padding:2px 6px; border-radius:4px; font-weight:bold;">${item.token}</code></td>
+                <td style="font-size:11px; color:#555;">${item.formLink}</td>
+                <td>${bgDisplay}</td>
+                <td>
+                    <button class="action-btn edit" onclick="masukModeEdit(${item.row}, '${btoa(encodeURIComponent(item.mapel))}', '${btoa(encodeURIComponent(item.durasi))}', '${btoa(encodeURIComponent(item.token))}', '${btoa(encodeURIComponent(item.formLink))}')">Edit Teks</button>
+                    <button class="action-btn delete" onclick="hapusBarisTotal(${item.row})">Hapus</button>
+                    <hr style="border:0; border-top:1px dashed #ccc; margin:4px 0;">
+                    <button class="action-btn bg-upload" onclick="prosesUploadBgKhusus(${item.row})">Pasang BG</button>
+                    <button class="action-btn bg-delete" onclick="hapusBgKhusus(${item.row})">Kosongkan BG</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+    } catch (err) {
+        console.error(err);
+        tableBody.innerHTML = `<tr><td colspan="6" style="color:red;">Gagal memuat data. Periksa koneksi internet / izin Web App.</td></tr>`;
+    }
+}
+
 // ================= PREVIEW & AUTO COMPRESS GAMBAR (LOKAL) =================
 document.getElementById("bgFile").addEventListener("change", function(e){
     const file = e.target.files[0];
@@ -242,13 +290,11 @@ document.getElementById("bgFile").addEventListener("change", function(e){
     reader.onload = function(event){
         const img = new Image();
         img.onload = function() {
-            // Pengaturan Batas Maksimal Resolusi Aman (Abaikan orientasi portrait/landscape)
             const MAX_WIDTH = 1280;
             const MAX_HEIGHT = 1280;
             let width = img.width;
             let height = img.height;
 
-            // Hitung Rasio Penyusutan Resolusi secara Proporsional
             if (width > height) {
                 if (width > MAX_WIDTH) {
                     height *= MAX_WIDTH / width;
@@ -261,17 +307,14 @@ document.getElementById("bgFile").addEventListener("change", function(e){
                 }
             }
 
-            // Proses Kompresi Menggunakan Canvas HTML5
             const canvas = document.createElement("canvas");
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Output Hasil Kompresi Menjadi Base64 Berkualitas Tinggi dengan Ukuran Ringan (< 1 MB)
             base64Image = canvas.toDataURL("image/jpeg", 0.75); 
             
-            // Tampilkan ke Kotak Preview Admin
             document.getElementById("preview").style.backgroundImage = `url(${base64Image})`;
             console.log("Gambar berhasil dikompresi untuk kestabilan upload.");
         };
@@ -279,6 +322,70 @@ document.getElementById("bgFile").addEventListener("change", function(e){
     };
     reader.readAsDataURL(file);
 });
+
+// ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
+async function simpanDataTeks() {
+    const formLink = document.getElementById("formLink").value.trim();
+    const token = document.getElementById("token").value.trim();
+    const mapel = document.getElementById("mapel").value.trim();
+    const durasi = document.getElementById("durasi").value.trim();
+
+    if (!formLink || !token || !mapel || !durasi) {
+        alert("Mohon lengkapi semua bidang data teks terlebih dahulu!");
+        return;
+    }
+
+    const btnSimpan = document.getElementById("btnSimpan");
+    btnSimpan.disabled = true;
+    btnSimpan.innerText = "Memproses...";
+
+    const formData = new URLSearchParams();
+    formData.append("action", editRow ? "update_text" : "add");
+    formData.append("formLink", formLink);
+    formData.append("token", token);
+    formData.append("mapel", mapel);
+    formData.append("durasi", durasi);
+    
+    if (editRow) {
+        formData.append("row", editRow);
+    }
+
+    try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const result = await res.text();
+
+        if (result.includes("SUCCESS")) {
+            alert(editRow ? "Data teks berhasil diperbarui!" : "Konfigurasi ujian baru berhasil ditambahkan!");
+            resetForm();
+            loadData();
+        } else {
+            alert("Respon Server: " + result);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Terjadi gangguan jaringan saat menyimpan data.");
+    } finally {
+        btnSimpan.disabled = false;
+    }
+}
+
+// ================= MASUK MODE EDIT TEKS DATA =================
+function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
+    editRow = row;
+    
+    document.getElementById("mapel").value = decodeURIComponent(atob(mapelB64));
+    document.getElementById("durasi").value = decodeURIComponent(atob(durasiB64));
+    document.getElementById("token").value = decodeURIComponent(atob(tokenB64));
+    document.getElementById("formLink").value = decodeURIComponent(atob(formLinkB64));
+
+    const btnSimpan = document.getElementById("btnSimpan");
+    btnSimpan.innerText = "Update Teks Data (Baris " + row + ")";
+    btnSimpan.style.background = "#ffc107";
+    btnSimpan.style.color = "black";
+    
+    document.getElementById("btnBatal").style.display = "block";
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 // ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 async function prosesUploadBgKhusus(row) {
@@ -290,14 +397,15 @@ async function prosesUploadBgKhusus(row) {
     if (!confirm(`Apakah Anda yakin ingin menimpa/mengisi background pada baris ${row}?`)) return;
 
     const btnSimpan = document.getElementById("btnSimpan");
+    const labelSblm = btnSimpan.innerText;
     btnSimpan.disabled = true;
-    btnSimpan.innerText = "Mengunggah...";
+    btnSimpan.innerText = "Mengunggah Gambar...";
 
-    // Gunakan FormData murni untuk efisiensi jalur transfer data
-    const formData = new FormData();
+    // Menggunakan URLSearchParams agar kompatibel penuh dengan pembacaan e.parameter di Apps Script
+    const formData = new URLSearchParams();
     formData.append("action", "upload_bg");
     formData.append("row", row);
-    formData.append("image", base64Image); // Mengirim base64 yang sudah dikompresi di atas
+    formData.append("image", base64Image); 
 
     try {
         const res = await fetch(API_URL, { method: "POST", body: formData });
@@ -317,9 +425,35 @@ async function prosesUploadBgKhusus(row) {
         alert("Terjadi kesalahan jaringan saat mentransfer data gambar.");
     } finally {
         btnSimpan.disabled = false;
-        btnSimpan.innerText = editRow ? "Update Teks Data" : "Simpan Data Baru";
+        btnSimpan.innerText = labelSblm;
     }
-}// ================= TOTAL HAPUS BARIS DATA =================
+}
+
+// ================= KOSONGKAN BACKGROUND BARIS DATA =================
+async function hapusBgKhusus(row) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus file background pada baris ${row} dan mengembalikannya ke default?`)) return;
+
+    const formData = new URLSearchParams();
+    formData.append("action", "delete_bg");
+    formData.append("row", row);
+
+    try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const result = await res.text();
+        
+        if (result.includes("SUCCESS")) {
+            alert("Background berhasil dikembalikan ke default!");
+            loadData();
+        } else {
+            alert("Gagal: " + result);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Gagal terhubung dengan server cloud.");
+    }
+}
+
+// ================= TOTAL HAPUS BARIS DATA =================
 async function hapusBarisTotal(row) {
     if (!confirm(`PERINGATAN: Menghapus baris data ${row} secara total? File gambar terikat juga akan dibersihkan otomatis.`)) return;
 
@@ -356,6 +490,7 @@ function resetForm() {
     const btnSimpan = document.getElementById("btnSimpan");
     btnSimpan.innerText = "Simpan Data Baru";
     btnSimpan.style.background = "#007bff";
+    btnSimpan.style.color = "white";
     document.getElementById("btnBatal").style.display = "none";
     
     base64Image = "";
