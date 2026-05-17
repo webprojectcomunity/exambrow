@@ -6,37 +6,38 @@
 <title>Admin Panel - Portal Ujian</title>
 
 <style>
+
 body {
     font-family: Arial;
     background: #f4f4f9;
     margin: 0;
-    padding: 20px;
+    padding: 15px;
 }
 
+/* CONTAINER */
 .container {
     background: white;
-    padding: 25px;
+    padding: 20px;
     border-radius: 10px;
-    max-width: 600px;
+    max-width: 700px;
     margin: auto;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-h2, h3 { text-align: center; }
-
+/* INPUT */
 input {
     width: 100%;
     padding: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     border-radius: 6px;
     border: 1px solid #ccc;
 }
 
+/* BUTTON */
 button {
     padding: 10px;
     border: none;
     border-radius: 6px;
-    font-weight: bold;
     cursor: pointer;
 }
 
@@ -44,31 +45,37 @@ button {
     width: 100%;
     background: #007bff;
     color: white;
+    font-weight: bold;
 }
 
-.save-btn:hover { background: #0056b3; }
+.save-btn:hover {
+    background: #0056b3;
+}
 
+/* PREVIEW */
 .preview {
     width: 100%;
-    height: 150px;
+    height: 140px;
     background-size: cover;
     background-position: center;
     border-radius: 8px;
     margin-bottom: 15px;
 }
 
-/* TABLE */
+/* TABLE RESPONSIVE */
+.table-container {
+    overflow-x: auto;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-}
-
-table, th, td {
-    border: 1px solid #ddd;
+    margin-top: 15px;
+    min-width: 600px;
 }
 
 th, td {
+    border: 1px solid #ddd;
     padding: 8px;
     text-align: center;
 }
@@ -79,8 +86,8 @@ img {
 
 .action-btn {
     padding: 5px 8px;
-    margin: 2px;
     font-size: 12px;
+    margin: 2px;
 }
 
 .edit { background: orange; color: white; }
@@ -92,29 +99,33 @@ img {
 <body>
 
 <div class="container">
-    <h2>Admin Panel</h2>
 
-    <input type="text" id="formLink" placeholder="Link Google Form">
-    <input type="text" id="token" placeholder="Token Ujian">
-    <input type="file" id="bgFile" accept="image/*">
+<h2>Admin Panel</h2>
 
-    <div class="preview" id="preview"></div>
+<input type="text" id="formLink" placeholder="Link Google Form">
+<input type="text" id="token" placeholder="Token Ujian">
+<input type="file" id="bgFile" accept="image/*">
 
-    <button class="save-btn" onclick="simpanData()">Simpan</button>
+<div class="preview" id="preview"></div>
 
-    <h3>Data Tersimpan</h3>
+<button class="save-btn" onclick="simpanData()">Simpan / Update</button>
 
-    <table id="dataTable">
-        <thead>
-            <tr>
-                <th>Form</th>
-                <th>Token</th>
-                <th>Background</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<h3>Data Tersimpan</h3>
+
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Form</th>
+<th>Token</th>
+<th>Background</th>
+<th>Aksi</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
 </div>
 
 <script>
@@ -122,8 +133,9 @@ img {
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
 let base64Image = "";
+let editRow = null;
 
-// ================= PREVIEW GAMBAR =================
+// ================= PREVIEW =================
 document.getElementById("bgFile").addEventListener("change", function(e){
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -136,47 +148,70 @@ document.getElementById("bgFile").addEventListener("change", function(e){
     if(file) reader.readAsDataURL(file);
 });
 
-// ================= LOAD DATA =================
+// ================= LOAD =================
 function loadData() {
     fetch(API_URL + "?action=all")
     .then(res => res.json())
     .then(data => {
 
-        const tbody = document.querySelector("#dataTable tbody");
+        const tbody = document.getElementById("tableBody");
         tbody.innerHTML = "";
 
         data.reverse().forEach(item => {
 
-            const row = `
-                <tr>
-                    <td>${item.formLink}</td>
-                    <td>${item.token}</td>
-                    <td><img src="${item.background}" width="80"></td>
-                    <td>
-                        <button class="action-btn edit" onclick="editData(${item.row}, '${item.formLink}', '${item.token}')">Edit</button>
-                        <button class="action-btn delete" onclick="hapusData(${item.row})">Hapus</button>
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML += `
+            <tr>
+                <td style="word-break: break-all">${item.formLink}</td>
+                <td>${item.token}</td>
+                <td><img src="${item.background}" width="70"></td>
+                <td>
+                    <button class="action-btn edit"
+                        onclick="isiForm(${item.row}, '${item.formLink}', '${item.token}', '${item.background}')">
+                        Edit
+                    </button>
 
-            tbody.innerHTML += row;
+                    <button class="action-btn delete"
+                        onclick="hapusData(${item.row})">
+                        Hapus
+                    </button>
+                </td>
+            </tr>
+            `;
         });
     });
 }
 
-// ================= SIMPAN =================
+// ================= ISI FORM EDIT =================
+function isiForm(row, formLink, token, bg) {
+    editRow = row;
+
+    document.getElementById("formLink").value = formLink;
+    document.getElementById("token").value = token;
+
+    document.getElementById("preview").style.backgroundImage = `url(${bg})`;
+    base64Image = ""; // reset agar tidak overwrite kalau tidak upload ulang
+}
+
+// ================= SIMPAN / UPDATE =================
 function simpanData() {
 
     const formLink = document.getElementById("formLink").value;
     const token = document.getElementById("token").value;
 
     if (!formLink || !token) {
-        alert("Isi semua field!");
+        alert("Isi semua data!");
         return;
     }
 
     const formData = new URLSearchParams();
-    formData.append("action", "add");
+
+    if (editRow) {
+        formData.append("action", "update");
+        formData.append("row", editRow);
+    } else {
+        formData.append("action", "add");
+    }
+
     formData.append("formLink", formLink);
     formData.append("token", token);
     formData.append("image", base64Image);
@@ -187,12 +222,14 @@ function simpanData() {
     })
     .then(() => {
         alert("Berhasil disimpan!");
+        resetForm();
         loadData();
     });
 }
 
 // ================= HAPUS =================
 function hapusData(row) {
+
     if (!confirm("Yakin hapus data?")) return;
 
     const formData = new URLSearchParams();
@@ -206,25 +243,13 @@ function hapusData(row) {
     .then(() => loadData());
 }
 
-// ================= EDIT =================
-function editData(row, formLink, token) {
-
-    const newForm = prompt("Edit Form Link:", formLink);
-    const newToken = prompt("Edit Token:", token);
-
-    if (!newForm || !newToken) return;
-
-    const formData = new URLSearchParams();
-    formData.append("action", "update");
-    formData.append("row", row);
-    formData.append("formLink", newForm);
-    formData.append("token", newToken);
-
-    fetch(API_URL, {
-        method: "POST",
-        body: formData
-    })
-    .then(() => loadData());
+// ================= RESET =================
+function resetForm() {
+    document.getElementById("formLink").value = "";
+    document.getElementById("token").value = "";
+    document.getElementById("preview").style.backgroundImage = "";
+    base64Image = "";
+    editRow = null;
 }
 
 // ================= INIT =================
