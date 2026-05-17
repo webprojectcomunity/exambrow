@@ -266,7 +266,7 @@ function periksaStatusServer(nis) {
     .then(res => res.json())
     .then(res => {
         const inputToken = document.getElementById("token-input");
-        const btnLogin = document.getElementById("btn-login-token"); // Pastikan ID tombol ini sesuai di HTML Anda
+        const btnLogin = document.getElementById("btn-login-token"); 
 
         if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
             // Simpan status blokir secara lokal agar awet saat di-refresh
@@ -393,6 +393,7 @@ function verifikasiToken() {
         .catch(err => alert("Gagal memvalidasi token ke server."));
     });
 }
+
 function kirimDataSiswa(token) {
     const formData = new URLSearchParams();
     formData.append("action", "add_siswa");
@@ -537,15 +538,40 @@ function akhiriUjian() {
         document.exitFullscreen().catch(() => {});
     }
 
-    document.getElementById('exam-popup').innerHTML = '';
-    document.getElementById('exam-popup').style.display = 'none';
+    // Set flag status tidak aktif/terkunci di lokal agar tidak bisa masuk lagi tanpa reset pengawas
+    localStorage.setItem("is_blocked", "true");
 
-    document.getElementById('login-container').innerHTML = `
-        <h2 style="color: green; margin-top: 20px;">UJIAN SELESAI</h2>
-        <p style="color: #333;">Terima kasih, data ujian Anda telah disimpan.</p>
-        <p>Silakan menutup halaman ini dengan tenang.</p>
-    `;
-    document.getElementById('login-container').style.display = 'block';
+    // Kirim sinyal ke server GAS untuk mengubah status menjadi 'Tidak Aktif' dan mengisi catatan
+    const formData = new URLSearchParams();
+    formData.append("action", "blokir_siswa"); // Memanfaatkan engine action yang sama untuk mengubah status di Sheet
+    formData.append("nis", localStorage.getItem("nis"));
+    formData.append("nama", localStorage.getItem("nama"));
+    formData.append("alasan", "Telah menyelesaikan ujian");
+
+    fetch(API_URL, { method: "POST", body: formData })
+    .then(() => {
+        document.getElementById('exam-popup').innerHTML = '';
+        document.getElementById('exam-popup').style.display = 'none';
+
+        document.getElementById('login-container').innerHTML = `
+            <h2 style="color: green; margin-top: 20px;">UJIAN SELESAI</h2>
+            <p style="color: #333;">Terima kasih, data ujian Anda telah disimpan.</p>
+            <p>Silakan menutup halaman ini dengan tenang.</p>
+        `;
+        document.getElementById('login-container').style.display = 'block';
+    })
+    .catch(err => {
+        console.error("Gagal mengirim status selesai ke server:", err);
+        // Tetap tampilkan halaman selesai meskipun log server gagal agar siswa tidak panik
+        document.getElementById('exam-popup').innerHTML = '';
+        document.getElementById('exam-popup').style.display = 'none';
+        
+        document.getElementById('login-container').innerHTML = `
+            <h2 style="color: green; margin-top: 20px;">UJIAN SELESAI</h2>
+            <p style="color: #333;">Data lokal disimpan, namun gagal sinkronisasi ke server. Hubungi pengawas untuk verifikasi.</p>
+        `;
+        document.getElementById('login-container').style.display = 'block';
+    });
 }
 
 // --- SECURITY SHORTCUT KEY & MOUSE BLOKER ---
@@ -565,5 +591,6 @@ window.onbeforeunload = function() {
         return "Ujian sedang berlangsung! Riwayat pengerjaan Anda berisiko hilang.";
     }
 };
-</script></body>
+</script>
+</body>
 </html>
