@@ -7,7 +7,7 @@
 
 <style>
 body {
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     background: #f4f4f9;
     margin: 0;
     display: flex;
@@ -33,6 +33,7 @@ input {
     margin: 10px 0;
     border-radius: 6px;
     border: 1px solid #ccc;
+    box-sizing: border-box;
 }
 
 /* BUTTON */
@@ -60,6 +61,7 @@ button:hover {
     width:100%;
     height:100%;
     background:white;
+    z-index: 999;
 }
 
 iframe {
@@ -73,7 +75,41 @@ iframe {
     font-size: 13px;
     margin-bottom: 10px;
     color: #333;
+    text-align: left;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #eee;
 }
+
+/* Kotak Dialog Peringatan Pelanggaran Kustom */
+#custom-modal {
+    display: none; /* Tersembunyi di awal */
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.modal-content h3 { color: #dc3545; margin-top: 0; }
+.modal-content p { color: #333; font-size: 15px; line-height: 1.5; }
+.modal-content button { 
+    background: #007bff; 
+    width: auto; 
+    padding: 10px 20px; 
+}
+.modal-content button:hover { background: #0056b3; }
 </style>
 </head>
 
@@ -90,9 +126,7 @@ iframe {
 
 <!-- ================= TOKEN ================= -->
 <div id="login-container" class="box" style="display:none;">
-
     <div id="info-siswa"></div>
-
     <h3>Masukkan Token</h3>
     <input type="text" id="token-input" placeholder="Masukkan token">
     <button onclick="verifikasiToken()">Mulai Ujian</button>
@@ -100,7 +134,17 @@ iframe {
 
 <!-- ================= UJIAN ================= -->
 <div id="exam-popup">
-    <iframe id="gform-iframe"></iframe>
+    <iframe id="gform-iframe" allow="fullscreen"></iframe>
+</div>
+
+<!-- Kotak Dialog Peringatan Pelanggaran Kustom -->
+<div id="custom-modal">
+    <div class="modal-content">
+        <h3>PERINGATAN PELANGGARAN!</h3>
+        <p id="modal-message">Alasan pelanggaran akan muncul di sini.</p>
+        <p><strong>Sisa kesempatan Anda: <span id="modal-chance">3</span> kali lagi.</strong></p>
+        <button onclick="tutupModalPeringatan()">Saya Mengerti & Lanjutkan</button>
+    </div>
 </div>
 
 <script>
@@ -109,6 +153,10 @@ const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV
 
 let VALID_TOKEN = "";
 let FORM_LINK = "";
+
+// Variabel Kontrol Anti-Curang
+let ujianBerjalan = false;
+let batasPelanggaran = 3;
 
 // ================= LOAD DATA =================
 window.onload = function () {
@@ -177,9 +225,9 @@ function tampilToken() {
 
     // tampilkan identitas siswa
     document.getElementById("info-siswa").innerHTML =
-        "Nama: " + localStorage.getItem("nama") + "<br>" +
-        "NIS: " + localStorage.getItem("nis") + "<br>" +
-        "Kelas: " + localStorage.getItem("kelas");
+        "<strong>Nama:</strong> " + localStorage.getItem("nama") + "<br>" +
+        "<strong>NIS:</strong> " + localStorage.getItem("nis") + "<br>" +
+        "<strong>Kelas:</strong> " + localStorage.getItem("kelas");
 }
 
 // ================= VERIFIKASI TOKEN =================
@@ -198,9 +246,9 @@ function verifikasiToken() {
         document.getElementById("login-container").style.display = "none";
         document.getElementById("exam-popup").style.display = "block";
 
-        // fullscreen
-        document.documentElement.requestFullscreen()
-            .catch(() => {});
+        // Aktifkan Pengawasan Anti-Curang dan Masuk Fullscreen
+        ujianBerjalan = true;
+        masukFullscreen();
 
     } else {
         alert("Token salah!");
@@ -227,6 +275,97 @@ function kirimDataSiswa(token) {
     .catch(err => console.error(err));
 }
 
+// ================= FUNGSI PAKSA LAYAR PENUH =================
+function masukFullscreen() {
+    let elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => console.log(err));
+    } else if (elem.webkitRequestFullscreen) { 
+        elem.webkitRequestFullscreen(); // Khusus iOS Safari
+    }
+}
+
+// ---------------- ALGORITMA ANTI-CURANG ----------------
+
+// 1. Deteksi Pindah Tab / Pindah Aplikasi (Tombol Home, Split Screen, WhatsApp)
+document.addEventListener("visibilitychange", function() {
+    if (document.hidden && ujianBerjalan) {
+        catatPelanggaran("Terdeteksi meminimalkan halaman, membuka aplikasi lain, atau berpindah tab!");
+    }
+});
+
+// 2. Deteksi Keluar dari Mode Fullscreen
+document.addEventListener('fullscreenchange', function() {
+    if (!document.fullscreenElement && ujianBerjalan) {
+        catatPelanggaran("Terdeteksi keluar dari mode layar penuh (Fullscreen)!");
+    }
+});
+document.addEventListener('webkitfullscreenchange', function() { // Pelacakan khusus iOS Safari
+    if (!document.webkitFullscreenElement && ujianBerjalan) {
+        catatPelanggaran("Terdeteksi keluar dari mode layar penuh!");
+    }
+});
+
+// 3. Sistem Pencatatan Pelanggaran dan Sanksi
+function catatPelanggaran(alasan) {
+    if (!ujianBerjalan) return;
+    
+    batasPelanggaran--;
+    
+    if (batasPelanggaran > 0) {
+        // Tampilkan pesan lewat dialog kustom HTML
+        document.getElementById('modal-message').innerText = alasan;
+        document.getElementById('modal-chance').innerText = batasPelanggaran;
+        document.getElementById('custom-modal').style.display = 'flex';
+    } else {
+        // JIKA NYAWA HABIS: DISKUALIFIKASI & TUTUP PORTAL
+        ujianBerjalan = false;
+        document.getElementById('custom-modal').style.display = 'none';
+        portalTerkunci();
+    }
+}
+
+function tutupModalPeringatan() {
+    document.getElementById('custom-modal').style.display = 'none';
+    // Paksa masuk layar penuh kembali setelah siswa membaca peringatan
+    masukFullscreen();
+}
+
+// 4. Kunci Portal secara Otomatis
+function portalTerkunci() {
+    window.onbeforeunload = null; 
+    
+    // Hilangkan Google Form dan blokir akses siswa
+    document.getElementById('exam-popup').innerHTML = '';
+    document.getElementById('exam-popup').style.display = 'none';
+    
+    document.getElementById('identitas-box').style.display = 'none';
+    
+    document.getElementById('login-container').innerHTML = `
+        <h2 style="color: red; font-size: 24px;">AKSES ANDA DIBLOKIR</h2>
+        <p style="font-size: 16px; color: #333;">Sistem mendeteksi tindakan kecurangan berulang kali (pindah aplikasi/layar).</p>
+        <p style="font-weight: bold; color: #dc3545;">Ujian Anda telah dihentikan secara otomatis.</p>
+        <p style="margin-top: 20px; font-size: 14px; color: #666;">Silakan menghadap Pengawas atau Proktor di ruang ujian untuk membuka blokir.</p>
+    `;
+    document.getElementById('login-container').style.display = 'block';
+}
+
+// Blokir Tombol Kombinasi Desktop (Ctrl+C, Ctrl+V, F12, Ctrl+U)
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 's')) {
+        e.preventDefault();
+    }
+    if (e.key === 'F12') {
+        e.preventDefault();
+    }
+});
+
+// Konfirmasi Keamanan saat Refresh / Menutup Browser secara Sengaja
+window.onbeforeunload = function() {
+    if (ujianBerjalan) {
+        return "Ujian sedang berlangsung! Riwayat pengerjaan Anda berisiko hilang.";
+    }
+};
 </script>
 
 </body>
