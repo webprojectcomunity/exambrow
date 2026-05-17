@@ -16,6 +16,7 @@ body {
     height: 100vh;
 }
 
+/* BOX */
 .box {
     background: white;
     padding: 25px;
@@ -25,6 +26,7 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
+/* INPUT */
 input {
     width: 90%;
     padding: 10px;
@@ -33,6 +35,7 @@ input {
     border: 1px solid #ccc;
 }
 
+/* BUTTON */
 button {
     padding: 10px;
     width: 95%;
@@ -43,6 +46,7 @@ button {
     cursor: pointer;
 }
 
+/* UJIAN */
 #exam-popup {
     display: none;
     position: fixed;
@@ -92,25 +96,39 @@ let FORM_LINK = "";
 // ================= LOAD =================
 window.onload = function () {
 
+    // kalau sudah isi identitas
     if (localStorage.getItem("nama")) {
         tampilToken();
     }
 
-    fetch(API_URL)
+    fetch(API_URL + "?action=latest")
     .then(res => res.json())
     .then(data => {
 
-        VALID_TOKEN = (data.token || "").trim().toLowerCase();
+        console.log("DATA SERVER:", data);
+
+        // 🔥 NORMALISASI TOKEN (ANTI ERROR)
+        VALID_TOKEN = (data.token || "")
+            .toString()
+            .trim()
+            .replace(/\s+/g, "")
+            .toLowerCase();
+
         FORM_LINK = data.formLink || "";
 
         document.getElementById("gform-iframe").src = FORM_LINK;
 
+        // background
         if (data.background) {
             document.body.style.background =
                 `url(${data.background}) no-repeat center center fixed`;
             document.body.style.backgroundSize = "cover";
         }
 
+    })
+    .catch(err => {
+        console.error("Gagal load data:", err);
+        alert("Gagal mengambil data server!");
     });
 
 };
@@ -134,18 +152,23 @@ function simpanIdentitas() {
     tampilToken();
 }
 
-// ================= TAMPIL TOKEN =================
+// ================= PINDAH KE TOKEN =================
 function tampilToken() {
     document.getElementById("identitas-box").style.display = "none";
     document.getElementById("login-container").style.display = "block";
 }
 
-// ================= VERIFIKASI =================
+// ================= VERIFIKASI TOKEN =================
 function verifikasiToken() {
 
     const inputToken = document.getElementById("token-input").value
+        .toString()
         .trim()
+        .replace(/\s+/g, "")
         .toLowerCase();
+
+    console.log("INPUT:", inputToken);
+    console.log("VALID:", VALID_TOKEN);
 
     if (inputToken === VALID_TOKEN) {
 
@@ -154,19 +177,23 @@ function verifikasiToken() {
         document.getElementById("login-container").style.display = "none";
         document.getElementById("exam-popup").style.display = "block";
 
-        document.documentElement.requestFullscreen();
+        // fullscreen aman
+        document.documentElement.requestFullscreen()
+            .catch(() => {});
 
     } else {
         alert("Token salah!");
     }
 }
 
-// ================= SIMPAN KE SHEET =================
+// ================= KIRIM DATA SISWA =================
 function kirimDataSiswa(token) {
 
     const formData = new URLSearchParams();
 
-    formData.append("action", "siswa");
+    // 🔥 PERBAIKAN DI SINI
+    formData.append("action", "add_siswa");
+
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("kelas", localStorage.getItem("kelas"));
@@ -175,7 +202,10 @@ function kirimDataSiswa(token) {
     fetch(API_URL, {
         method: "POST",
         body: formData
-    });
+    })
+    .then(res => res.text())
+    .then(res => console.log("SISWA:", res))
+    .catch(err => console.error(err));
 }
 
 </script>
