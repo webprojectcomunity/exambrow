@@ -233,160 +233,52 @@ const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV
 let base64Image = "";
 let editRow = null;
 
-// ================= PREVIEW GAMBAR (LOKAL) =================
+// ================= PREVIEW & AUTO COMPRESS GAMBAR (LOKAL) =================
 document.getElementById("bgFile").addEventListener("change", function(e){
     const file = e.target.files[0];
+    if (!file) return;
+
     const reader = new FileReader();
+    reader.onload = function(event){
+        const img = new Image();
+        img.onload = function() {
+            // Pengaturan Batas Maksimal Resolusi Aman (Abaikan orientasi portrait/landscape)
+            const MAX_WIDTH = 1280;
+            const MAX_HEIGHT = 1280;
+            let width = img.width;
+            let height = img.height;
 
-    reader.onload = function(){
-        base64Image = reader.result;
-        document.getElementById("preview").style.backgroundImage = `url(${base64Image})`;
-    }
+            // Hitung Rasio Penyusutan Resolusi secara Proporsional
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
 
-    if(file) reader.readAsDataURL(file);
+            // Proses Kompresi Menggunakan Canvas HTML5
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Output Hasil Kompresi Menjadi Base64 Berkualitas Tinggi dengan Ukuran Ringan (< 1 MB)
+            base64Image = canvas.toDataURL("image/jpeg", 0.75); 
+            
+            // Tampilkan ke Kotak Preview Admin
+            document.getElementById("preview").style.backgroundImage = `url(${base64Image})`;
+            console.log("Gambar berhasil dikompresi untuk kestabilan upload.");
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
 });
-
-// ================= LOAD DATABASE (GET) =================
-async function loadData() {
-    try {
-        const res = await fetch(API_URL + "?action=all");
-        const data = await res.json();
-
-        const tbody = document.getElementById("tableBody");
-        tbody.innerHTML = "";
-
-        if (data.error) {
-            tbody.innerHTML = `<tr><td colspan="6">Error: ${data.error}</td></tr>`;
-            return;
-        }
-
-        if (!Array.isArray(data) || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6">Belum ada konfigurasi terdaftar</td></tr>`;
-            return;
-        }
-
-        // Tampilkan data terbaru di posisi paling atas (Reverse)
-        data.reverse().forEach(item => {
-            const safeForm = encodeURIComponent(item.formLink || "");
-            const safeToken = encodeURIComponent(item.token || "");
-            const safeMapel = encodeURIComponent(item.mapel || "");
-            const safeDurasi = encodeURIComponent(item.durasi || "");
-            const safeBg = encodeURIComponent(item.background || "");
-
-            tbody.innerHTML += `
-            <tr>
-                <td><strong>${item.mapel || "-"}</strong></td>
-                <td>${item.durasi || "-"}</td>
-                <td><code style="background:#eee;padding:2px 6px;border-radius:4px">${item.token}</code></td>
-                <td><a href="${item.formLink}" target="_blank">Buka Form</a></td>
-                <td>
-                    ${item.background && item.background !== "-" ? `<img src="${item.background}" alt="bg">` : "<em style='color:#999'>Polos</em>"}
-                </td>
-                <td>
-                    <!-- Manajemen Teks -->
-                    <button class="action-btn edit" title="Edit Data Teks"
-                        onclick="isiForm(${item.row}, decodeURIComponent('${safeForm}'), decodeURIComponent('${safeToken}'), decodeURIComponent('${safeMapel}'), decodeURIComponent('${safeDurasi}'), decodeURIComponent('${safeBg}'))">
-                        Edit Teks
-                    </button>
-                    <button class="action-btn delete" title="Hapus Baris Total"
-                        onclick="hapusBarisTotal(${item.row})">
-                        Hapus
-                    </button>
-                    <br>
-                    <!-- Manajemen File Terpisah -->
-                    <button class="action-btn bg-upload" title="Unggah Gambar di Atas Ke Baris Ini"
-                        onclick="prosesUploadBgKhusus(${item.row})">
-                        Sync BG
-                    </button>
-                    ${item.background && item.background !== "-" ? `
-                        <button class="action-btn bg-delete" title="Hapus Gambar Saja"
-                            onclick="prosesHapusBgKhusus(${item.row})">
-                            Wipe BG
-                        </button>
-                    ` : ""}
-                </td>
-            </tr>
-            `;
-        });
-    } catch (err) {
-        console.error(err);
-        document.getElementById("tableBody").innerHTML = `<tr><td colspan="6">Gagal sinkronisasi. Periksa jaringan API Web Apps.</td></tr>`;
-    }
-}
-
-// ================= AMBIL DATA KE FORM UNTUK EDIT =================
-function isiForm(row, formLink, token, mapel, durasi, bg) {
-    editRow = row;
-
-    document.getElementById("formLink").value = formLink;
-    document.getElementById("token").value = token;
-    document.getElementById("mapel").value = mapel;
-    document.getElementById("durasi").value = durasi;
-    
-    if(bg && bg !== "undefined" && bg !== "-") {
-        document.getElementById("preview").style.backgroundImage = `url(${bg})`;
-    } else {
-        document.getElementById("preview").style.backgroundImage = "";
-    }
-
-    document.getElementById("btnSimpan").innerText = "Update Teks Data (Row " + row + ")";
-    document.getElementById("btnSimpan").style.background = "#fd7e14";
-    document.getElementById("btnBatal").style.display = "block";
-    
-    // Jangan ganggu file lokal yang sedang dipilih antrean
-    base64Image = ""; 
-    document.getElementById("bgFile").value = "";
-}
-
-// ================= SIMPAN / UPDATE TEKS (POST) =================
-async function simpanDataTeks() {
-    const formLink = document.getElementById("formLink").value.trim();
-    const token = document.getElementById("token").value.trim();
-    const mapel = document.getElementById("mapel").value.trim();
-    const durasi = document.getElementById("durasi").value.trim();
-    const btnSimpan = document.getElementById("btnSimpan");
-
-    if (!formLink || !token || !mapel || !durasi) {
-        alert("Seluruh field teks utama wajib dilengkapi!");
-        return;
-    }
-
-    btnSimpan.innerText = "Memproses Jaringan...";
-    btnSimpan.disabled = true;
-
-    const formData = new URLSearchParams();
-
-    if (editRow) {
-        formData.append("action", "update_text");
-        formData.append("row", editRow);
-    } else {
-        formData.append("action", "add");
-    }
-
-    formData.append("formLink", formLink);
-    formData.append("token", token);
-    formData.append("mapel", mapel);
-    formData.append("durasi", durasi);
-
-    try {
-        const res = await fetch(API_URL, { method: "POST", body: formData });
-        const result = await res.text();
-
-        if (result.includes("SUCCESS")) {
-            alert("Data teks berhasil diperbarui ke Cloud!");
-            resetForm();
-            loadData();
-        } else {
-            alert("Respon Server: " + result);
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Koneksi gagal terhubung ke Google Apps Script.");
-    } finally {
-        btnSimpan.disabled = false;
-        btnSimpan.innerText = editRow ? "Update Teks Data" : "Simpan Data Baru";
-    }
-}
 
 // ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 async function prosesUploadBgKhusus(row) {
@@ -399,11 +291,13 @@ async function prosesUploadBgKhusus(row) {
 
     const btnSimpan = document.getElementById("btnSimpan");
     btnSimpan.disabled = true;
+    btnSimpan.innerText = "Mengunggah...";
 
-    const formData = new URLSearchParams();
+    // Gunakan FormData murni untuk efisiensi jalur transfer data
+    const formData = new FormData();
     formData.append("action", "upload_bg");
     formData.append("row", row);
-    formData.append("image", base64Image);
+    formData.append("image", base64Image); // Mengirim base64 yang sudah dikompresi di atas
 
     try {
         const res = await fetch(API_URL, { method: "POST", body: formData });
@@ -416,41 +310,16 @@ async function prosesUploadBgKhusus(row) {
             document.getElementById("preview").style.backgroundImage = "";
             loadData();
         } else {
-            alert("Gagal upload: " + result);
+            alert("Gagal upload. Respon Server: " + result);
         }
     } catch (err) {
         console.error(err);
-        alert("Terjadi error saat mentransfer data gambar.");
+        alert("Terjadi kesalahan jaringan saat mentransfer data gambar.");
     } finally {
         btnSimpan.disabled = false;
+        btnSimpan.innerText = editRow ? "Update Teks Data" : "Simpan Data Baru";
     }
-}
-
-// ================= TERPISAH: HAPUS BACKGROUND SAJA =================
-async function prosesHapusBgKhusus(row) {
-    if (!confirm(`Bersihkan file gambar latar belakang pada baris ${row}? File lama di Drive akan dibersihkan.`)) return;
-
-    const formData = new URLSearchParams();
-    formData.append("action", "delete_bg");
-    formData.append("row", row);
-
-    try {
-        const res = await fetch(API_URL, { method: "POST", body: formData });
-        const result = await res.text();
-
-        if (result.includes("SUCCESS")) {
-            alert("Gambar background baris terkait berhasil dihapus!");
-            loadData();
-        } else {
-            alert("Gagal menghapus gambar: " + result);
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Gagal mengirim perintah hapus gambar.");
-    }
-}
-
-// ================= TOTAL HAPUS BARIS DATA =================
+}// ================= TOTAL HAPUS BARIS DATA =================
 async function hapusBarisTotal(row) {
     if (!confirm(`PERINGATAN: Menghapus baris data ${row} secara total? File gambar terikat juga akan dibersihkan otomatis.`)) return;
 
