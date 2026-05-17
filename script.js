@@ -14,7 +14,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
         console.log("DATA:", data);
 
-        VALID_TOKEN = (data.token || "").trim();
+        VALID_TOKEN = (data.token || "");
         FORM_LINK = data.formLink || "";
 
         // Set iframe
@@ -45,9 +45,18 @@ function verifikasiToken() {
         return;
     }
 
-    const inputToken = document.getElementById("token-input").value.trim();
+    const inputToken = document.getElementById("token-input").value
+        .trim()
+        .toLowerCase();
 
-    if (inputToken === VALID_TOKEN) {
+    const validTokenClean = VALID_TOKEN
+        .trim()
+        .toLowerCase();
+
+    console.log("INPUT:", inputToken);
+    console.log("VALID:", validTokenClean);
+
+    if (inputToken === validTokenClean) {
         document.getElementById('login-container').style.display = 'none';
         document.getElementById('exam-popup').style.display = 'block';
         ujianBerjalan = true;
