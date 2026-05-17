@@ -95,17 +95,29 @@ document.getElementById("bgFile").addEventListener("change", function(e){
 function simpanData() {
     const btn = document.querySelector("button");
 
-    const formData = new URLSearchParams();
-formData.append("formLink", data.formLink);
-formData.append("token", data.token);
-formData.append("image", data.image);
+    const formLink = document.getElementById("formLink").value;
+    const token = document.getElementById("token").value;
 
-fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec", {
-    method: "POST",
-    body: formData
-})
+    if (!formLink || !token) {
+        alert("Link dan Token wajib diisi!");
+        return;
+    }
+
+    btn.innerText = "Menyimpan...";
+    btn.disabled = true;
+
+    const formData = new URLSearchParams();
+    formData.append("formLink", formLink);
+    formData.append("token", token);
+    formData.append("image", base64Image);
+
+    fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec", {
+        method: "POST",
+        body: formData
+    })
     .then(res => res.text())
     .then(res => {
+        console.log(res);
         alert("Berhasil disimpan!");
         btn.innerText = "Simpan Pengaturan";
         btn.disabled = false;
