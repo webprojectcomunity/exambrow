@@ -44,6 +44,11 @@ button {
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #218838;
 }
 
 /* UJIAN */
@@ -65,7 +70,7 @@ iframe {
 
 <body>
 
-<!-- IDENTITAS -->
+<!-- ================= IDENTITAS ================= -->
 <div id="identitas-box" class="box">
     <h3>Identitas Siswa</h3>
     <input type="text" id="nama" placeholder="Nama">
@@ -74,14 +79,14 @@ iframe {
     <button onclick="simpanIdentitas()">Lanjutkan</button>
 </div>
 
-<!-- TOKEN -->
+<!-- ================= TOKEN ================= -->
 <div id="login-container" class="box" style="display:none;">
     <h3>Masukkan Token</h3>
-    <input type="text" id="token-input">
+    <input type="text" id="token-input" placeholder="Masukkan token">
     <button onclick="verifikasiToken()">Mulai Ujian</button>
 </div>
 
-<!-- UJIAN -->
+<!-- ================= UJIAN ================= -->
 <div id="exam-popup">
     <iframe id="gform-iframe"></iframe>
 </div>
@@ -93,10 +98,10 @@ const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV
 let VALID_TOKEN = "";
 let FORM_LINK = "";
 
-// ================= LOAD =================
+// ================= LOAD DATA =================
 window.onload = function () {
 
-    // kalau sudah isi identitas
+    // jika sudah isi identitas sebelumnya
     if (localStorage.getItem("nama")) {
         tampilToken();
     }
@@ -118,7 +123,7 @@ window.onload = function () {
 
         document.getElementById("gform-iframe").src = FORM_LINK;
 
-        // background
+        // background dari admin
         if (data.background) {
             document.body.style.background =
                 `url(${data.background}) no-repeat center center fixed`;
@@ -127,13 +132,13 @@ window.onload = function () {
 
     })
     .catch(err => {
-        console.error("Gagal load data:", err);
+        console.error("Gagal load:", err);
         alert("Gagal mengambil data server!");
     });
 
 };
 
-// ================= IDENTITAS =================
+// ================= SIMPAN IDENTITAS =================
 function simpanIdentitas() {
 
     const nama = document.getElementById("nama").value.trim();
@@ -152,7 +157,7 @@ function simpanIdentitas() {
     tampilToken();
 }
 
-// ================= PINDAH KE TOKEN =================
+// ================= TAMPIL TOKEN =================
 function tampilToken() {
     document.getElementById("identitas-box").style.display = "none";
     document.getElementById("login-container").style.display = "block";
@@ -191,9 +196,7 @@ function kirimDataSiswa(token) {
 
     const formData = new URLSearchParams();
 
-    // 🔥 PERBAIKAN DI SINI
-    formData.append("action", "add_siswa");
-
+    formData.append("action", "add_siswa"); // 🔥 HARUS INI
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("kelas", localStorage.getItem("kelas"));
