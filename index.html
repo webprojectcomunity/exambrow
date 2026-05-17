@@ -160,29 +160,33 @@ let batasPelanggaran = 3;
 
 // ================= LOAD DATA =================
 window.onload = function () {
+    // 1. Cek apakah ada cache background dari sesi sebelumnya agar langsung tampil tanpa nunggu fetch
+    const cachedBg = localStorage.getItem("cached_background");
+    if (cachedBg) {
+        document.body.style.background = `url(${cachedBg}) no-repeat center center fixed`;
+        document.body.style.backgroundSize = "cover";
+    }
 
-    // ambil setting server
+    // 2. Tetap ambil data terbaru dari server untuk sinkronisasi token & update bg selanjutnya
     fetch(API_URL + "?action=latest")
     .then(res => res.json())
     .then(data => {
-
         console.log("DATA SERVER:", data);
 
-        VALID_TOKEN = (data.token || "")
-            .toString()
-            .trim()
-            .replace(/\s+/g, "")
-            .toLowerCase();
-
+        VALID_TOKEN = (data.token || "").toString().trim().replace(/\s+/g, "").toLowerCase();
         FORM_LINK = data.formLink || "";
         document.getElementById("gform-iframe").src = FORM_LINK;
 
+        // Jika ada background baru dari server
         if (data.background) {
-            document.body.style.background =
-                `url(${data.background}) no-repeat center center fixed`;
-            document.body.style.backgroundSize = "cover";
+            // Jika berbeda dengan cache, perbarui tampilannya
+            if (cachedBg !== data.background) {
+                document.body.style.background = `url(${data.background}) no-repeat center center fixed`;
+                document.body.style.backgroundSize = "cover";
+            }
+            // Simpan ke cache untuk digunakan pada login berikutnya
+            localStorage.setItem("cached_background", data.background);
         }
-
     });
 
     // ================= FLOW LOGIN =================
