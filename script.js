@@ -1,32 +1,51 @@
 let VALID_TOKEN = "";
 let FORM_LINK = "";
+let DATA_LOADED = false;
+
 let ujianBerjalan = false;
 let batasPelanggaran = 3;
 
-// ================= AMBIL DATA DARI SPREADSHEET =================
-fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec")
-.then(res => res.json())
-.then(data => {
-    VALID_TOKEN = data.token;
-    FORM_LINK = data.formLink;
+// ================= LOAD DATA =================
+window.addEventListener("DOMContentLoaded", function () {
 
-    // Set iframe
-    document.getElementById("gform-iframe").src = FORM_LINK;
+    fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec")
+    .then(res => res.json())
+    .then(data => {
 
-    // Set background
-    if (data.background) {
-        document.body.style.backgroundImage = `url(${data.background})`;
-        document.body.style.backgroundSize = "cover";
-        document.body.style.backgroundPosition = "center";
-    }
-})
-.catch(err => {
-    console.error("Gagal load data:", err);
+        console.log("DATA:", data);
+
+        VALID_TOKEN = (data.token || "").trim();
+        FORM_LINK = data.formLink || "";
+
+        // Set iframe
+        if (FORM_LINK) {
+            document.getElementById("gform-iframe").src = FORM_LINK;
+        }
+
+        // Set background
+        if (data.background) {
+            document.body.style.background = `url(${data.background}) no-repeat center center fixed`;
+            document.body.style.backgroundSize = "cover";
+        }
+
+        DATA_LOADED = true;
+    })
+    .catch(err => {
+        console.error("Gagal ambil data:", err);
+        alert("Gagal mengambil data dari server!");
+    });
+
 });
 
-// ================= LOGIN TOKEN =================
+// ================= LOGIN =================
 function verifikasiToken() {
-    const inputToken = document.getElementById('token-input').value.trim();
+
+    if (!DATA_LOADED) {
+        alert("Data belum siap, tunggu sebentar...");
+        return;
+    }
+
+    const inputToken = document.getElementById("token-input").value.trim();
 
     if (inputToken === VALID_TOKEN) {
         document.getElementById('login-container').style.display = 'none';
@@ -72,7 +91,7 @@ document.addEventListener('fullscreenchange', function() {
     }
 });
 
-// ================= SISTEM PELANGGARAN =================
+// ================= PELANGGARAN =================
 function catatPelanggaran(alasan) {
     batasPelanggaran--;
 
