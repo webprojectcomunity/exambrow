@@ -117,7 +117,7 @@ function simpanData() {
     })
     .then(res => res.text())
     .then(res => {
-        console.log(res);
+        console.log("Response:", res);
         alert("Berhasil disimpan!");
         btn.innerText = "Simpan Pengaturan";
         btn.disabled = false;
