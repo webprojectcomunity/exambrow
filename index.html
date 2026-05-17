@@ -16,7 +16,7 @@ body {
     height: 100vh;
 }
 
-/* BOX */
+/* BOX CONTAINER */
 .box {
     background: white;
     padding: 25px;
@@ -26,7 +26,7 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-/* INPUT */
+/* INPUT SYSTEM */
 input {
     width: 90%;
     padding: 10px;
@@ -36,7 +36,7 @@ input {
     box-sizing: border-box;
 }
 
-/* BUTTON */
+/* BUTTON SYSTEM */
 button {
     padding: 10px;
     width: 95%;
@@ -52,14 +52,11 @@ button:hover {
     background: #218838;
 }
 
-/* UJIAN */
+/* CONTAINER IFRAME UJIAN */
 #exam-popup {
     display: none;
     position: fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
+    top:0; left:0; width:100%; height:100%;
     background:white;
     z-index: 999;
 }
@@ -70,7 +67,7 @@ iframe {
     border:none;
 }
 
-/* INFO SISWA */
+/* INFO IDENTITAS SISWA */
 #info-siswa {
     font-size: 13px;
     margin-bottom: 10px;
@@ -82,9 +79,9 @@ iframe {
     border: 1px solid #eee;
 }
 
-/* Kotak Dialog Peringatan Pelanggaran Kustom */
+/* KOTAK DIALOG PERINGATAN KUSTOM (MODAL) */
 #custom-modal {
-    display: none; /* Tersembunyi di awal */
+    display: none;
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.8);
@@ -110,12 +107,25 @@ iframe {
     padding: 10px 20px; 
 }
 .modal-content button:hover { background: #0056b3; }
+
+/* TOMBOL SELESAI UJIAN MELAYANG */
+#btn-selesai {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: auto;
+    background: #dc3545;
+    padding: 12px 25px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+#btn-selesai:hover { background: #c82333; }
 </style>
 </head>
 
 <body>
 
-<!-- ================= IDENTITAS ================= -->
+<!-- ================= STAGE 1: IDENTITAS ================= -->
 <div id="identitas-box" class="box">
     <h3>Identitas Siswa</h3>
     <input type="text" id="nama" placeholder="Nama">
@@ -124,7 +134,7 @@ iframe {
     <button onclick="simpanIdentitas()">Lanjutkan</button>
 </div>
 
-<!-- ================= TOKEN ================= -->
+<!-- ================= STAGE 2: MASUKKAN TOKEN ================= -->
 <div id="login-container" class="box" style="display:none;">
     <div id="info-siswa"></div>
     <h3>Masukkan Token</h3>
@@ -132,12 +142,14 @@ iframe {
     <button onclick="verifikasiToken()">Mulai Ujian</button>
 </div>
 
-<!-- ================= UJIAN ================= -->
+<!-- ================= STAGE 3: HALAMAN UJIAN (IFRAME) ================= -->
 <div id="exam-popup">
     <iframe id="gform-iframe" allow="fullscreen"></iframe>
+    <!-- Tombol Selesai Ujian -->
+    <button id="btn-selesai" onclick="konfirmasiSelesai()">Selesai Ujian</button>
 </div>
 
-<!-- Kotak Dialog Peringatan Pelanggaran Kustom -->
+<!-- ================= KOTAK PERINGATAN KUSTOM ================= -->
 <div id="custom-modal">
     <div class="modal-content">
         <h3>PERINGATAN PELANGGARAN!</h3>
@@ -147,27 +159,30 @@ iframe {
     </div>
 </div>
 
+<!-- ================= SEGMEN SKRIP UTAMA PORTAL ================= -->
 <script>
-
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
 let VALID_TOKEN = "";
 let FORM_LINK = "";
+let DATA_LOADED = false;
 
-// Variabel Kontrol Anti-Curang
+// Variabel Kontrol Keamanan & Pelanggaran
 let ujianBerjalan = false;
 let batasPelanggaran = 3;
+let sedangMemulihkanFullscreen = false;
 
-// ================= LOAD DATA =================
-window.onload = function () {
-    // 1. Cek apakah ada cache background dari sesi sebelumnya agar langsung tampil tanpa nunggu fetch
+// --- METHOD: LOAD CONFIG UTAMA ---
+window.addEventListener("DOMContentLoaded", function () {
+    
+    // Optimasi Pemuatan Background Instan via Cache LocalStorage
     const cachedBg = localStorage.getItem("cached_background");
     if (cachedBg) {
         document.body.style.background = `url(${cachedBg}) no-repeat center center fixed`;
         document.body.style.backgroundSize = "cover";
     }
 
-    // 2. Tetap ambil data terbaru dari server untuk sinkronisasi token & update bg selanjutnya
+    // Tarik konfigurasi terbaru dari Google Web Apps
     fetch(API_URL + "?action=latest")
     .then(res => res.json())
     .then(data => {
@@ -175,21 +190,27 @@ window.onload = function () {
 
         VALID_TOKEN = (data.token || "").toString().trim().replace(/\s+/g, "").toLowerCase();
         FORM_LINK = data.formLink || "";
-        document.getElementById("gform-iframe").src = FORM_LINK;
 
-        // Jika ada background baru dari server
+        if (FORM_LINK) {
+            document.getElementById("gform-iframe").src = FORM_LINK;
+        }
+
         if (data.background) {
-            // Jika berbeda dengan cache, perbarui tampilannya
             if (cachedBg !== data.background) {
                 document.body.style.background = `url(${data.background}) no-repeat center center fixed`;
                 document.body.style.backgroundSize = "cover";
             }
-            // Simpan ke cache untuk digunakan pada login berikutnya
             localStorage.setItem("cached_background", data.background);
         }
+
+        DATA_LOADED = true;
+    })
+    .catch(err => {
+        console.error("Gagal sinkronisasi data:", err);
+        alert("Gagal mengambil data dari server! Periksa kembali jaringan internet.");
     });
 
-    // ================= FLOW LOGIN =================
+    // Validasi Sesi Login Menggunakan LocalStorage
     const nama = localStorage.getItem("nama");
     const nis = localStorage.getItem("nis");
     const kelas = localStorage.getItem("kelas");
@@ -200,11 +221,10 @@ window.onload = function () {
         document.getElementById("identitas-box").style.display = "block";
         document.getElementById("login-container").style.display = "none";
     }
-};
+});
 
-// ================= SIMPAN IDENTITAS =================
+// --- METHOD: MANAGEMEN USER ---
 function simpanIdentitas() {
-
     const nama = document.getElementById("nama").value.trim();
     const nis = document.getElementById("nis").value.trim();
     const kelas = document.getElementById("kelas").value.trim();
@@ -221,150 +241,175 @@ function simpanIdentitas() {
     tampilToken();
 }
 
-// ================= TAMPIL TOKEN =================
 function tampilToken() {
-
     document.getElementById("identitas-box").style.display = "none";
     document.getElementById("login-container").style.display = "block";
 
-    // tampilkan identitas siswa
     document.getElementById("info-siswa").innerHTML =
         "<strong>Nama:</strong> " + localStorage.getItem("nama") + "<br>" +
         "<strong>NIS:</strong> " + localStorage.getItem("nis") + "<br>" +
         "<strong>Kelas:</strong> " + localStorage.getItem("kelas");
 }
 
-// ================= VERIFIKASI TOKEN =================
 function verifikasiToken() {
+    if (!DATA_LOADED) {
+        alert("Data server belum siap, mohon tunggu beberapa detik...");
+        return;
+    }
 
     const inputToken = document.getElementById("token-input").value
-        .toString()
-        .trim()
-        .replace(/\s+/g, "")
-        .toLowerCase();
+        .toString().trim().replace(/\s+/g, "").toLowerCase();
 
     if (inputToken === VALID_TOKEN) {
-
+        // Daftarkan siswa ke log database absensi sheet
         kirimDataSiswa(inputToken);
 
         document.getElementById("login-container").style.display = "none";
         document.getElementById("exam-popup").style.display = "block";
 
-        // Aktifkan Pengawasan Anti-Curang dan Masuk Fullscreen
         ujianBerjalan = true;
         masukFullscreen();
-
     } else {
         alert("Token salah!");
     }
 }
 
-// ================= KIRIM DATA SISWA =================
 function kirimDataSiswa(token) {
-
     const formData = new URLSearchParams();
-
     formData.append("action", "add_siswa");
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("kelas", localStorage.getItem("kelas"));
     formData.append("token", token);
 
-    fetch(API_URL, {
-        method: "POST",
-        body: formData
-    })
+    fetch(API_URL, { method: "POST", body: formData })
     .then(res => res.text())
-    .then(res => console.log("SISWA:", res))
+    .then(res => console.log("Log Absen Sukses:", res))
     .catch(err => console.error(err));
 }
 
-// ================= FUNGSI PAKSA LAYAR PENUH =================
+// --- METHOD: VIEW INTERACTION ---
 function masukFullscreen() {
     let elem = document.documentElement;
     if (elem.requestFullscreen) {
         elem.requestFullscreen().catch(err => console.log(err));
     } else if (elem.webkitRequestFullscreen) { 
-        elem.webkitRequestFullscreen(); // Khusus iOS Safari
+        elem.webkitRequestFullscreen();
     }
 }
 
-// ---------------- ALGORITMA ANTI-CURANG ----------------
+// --- SYSTEM LOGIC: ANTI-CURANG ---
 
-// 1. Deteksi Pindah Tab / Pindah Aplikasi (Tombol Home, Split Screen, WhatsApp)
+// 1. Monitor Perpindahan Fokus / Aplikasi / Minimize Tab
 document.addEventListener("visibilitychange", function() {
     if (document.hidden && ujianBerjalan) {
         catatPelanggaran("Terdeteksi meminimalkan halaman, membuka aplikasi lain, atau berpindah tab!");
     }
 });
 
-// 2. Deteksi Keluar dari Mode Fullscreen
+// 2. Monitor Paksa Keluar Mode Layar Penuh (Fullscreen)
 document.addEventListener('fullscreenchange', function() {
+    if (sedangMemulihkanFullscreen) return; 
     if (!document.fullscreenElement && ujianBerjalan) {
         catatPelanggaran("Terdeteksi keluar dari mode layar penuh (Fullscreen)!");
     }
 });
-document.addEventListener('webkitfullscreenchange', function() { // Pelacakan khusus iOS Safari
+document.addEventListener('webkitfullscreenchange', function() {
+    if (sedangMemulihkanFullscreen) return;
     if (!document.webkitFullscreenElement && ujianBerjalan) {
         catatPelanggaran("Terdeteksi keluar dari mode layar penuh!");
     }
 });
 
-// 3. Sistem Pencatatan Pelanggaran dan Sanksi
+// 3. Proses Validasi Hitung Pelanggaran Sisa Kesempatan
 function catatPelanggaran(alasan) {
     if (!ujianBerjalan) return;
     
     batasPelanggaran--;
     
     if (batasPelanggaran > 0) {
-        // Tampilkan pesan lewat dialog kustom HTML
         document.getElementById('modal-message').innerText = alasan;
         document.getElementById('modal-chance').innerText = batasPelanggaran;
         document.getElementById('custom-modal').style.display = 'flex';
     } else {
-        // JIKA NYAWA HABIS: DISKUALIFIKASI & TUTUP PORTAL
-        ujianBerjalan = false;
-        document.getElementById('custom-modal').style.display = 'none';
         portalTerkunci();
     }
 }
 
 function tutupModalPeringatan() {
     document.getElementById('custom-modal').style.display = 'none';
-    // Paksa masuk layar penuh kembali setelah siswa membaca peringatan
+    sedangMemulihkanFullscreen = true; 
     masukFullscreen();
+    setTimeout(() => { sedangMemulihkanFullscreen = false; }, 500);
 }
 
-// 4. Kunci Portal secara Otomatis
+// 4. Eksekusi Sanksi Penguncian & Kirim Sinyal Blokir Ke Server GAS
 function portalTerkunci() {
+    ujianBerjalan = false;
     window.onbeforeunload = null; 
     
-    // Hilangkan Google Form dan blokir akses siswa
+    const formData = new URLSearchParams();
+    formData.append("action", "blokir_siswa");
+    formData.append("nis", localStorage.getItem("nis"));
+    formData.append("nama", localStorage.getItem("nama"));
+    formData.append("alasan", "Kecurangan berulang (Keluar aplikasi/Layar Penuh)");
+
+    fetch(API_URL, { method: "POST", body: formData })
+    .catch(err => console.error("Gagal kirim log blokir:", err));
+
     document.getElementById('exam-popup').innerHTML = '';
     document.getElementById('exam-popup').style.display = 'none';
-    
     document.getElementById('identitas-box').style.display = 'none';
     
     document.getElementById('login-container').innerHTML = `
-        <h2 style="color: red; font-size: 24px;">AKSES ANDA DIBLOKIR</h2>
-        <p style="font-size: 16px; color: #333;">Sistem mendeteksi tindakan kecurangan berulang kali (pindah aplikasi/layar).</p>
+        <h2 style="color: red; font-size: 24px; margin-top: 20px;">AKSES ANDA DIBLOKIR</h2>
+        <p style="font-size: 16px; color: #333;">Sistem mendeteksi tindakan kecurangan berulang kali.</p>
         <p style="font-weight: bold; color: #dc3545;">Ujian Anda telah dihentikan secara otomatis.</p>
-        <p style="margin-top: 20px; font-size: 14px; color: #666;">Silakan menghadap Pengawas atau Proktor di ruang ujian untuk membuka blokir.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 14px; color: #666;">Silakan menghadap Pengawas untuk membuka blokir.</p>
     `;
     document.getElementById('login-container').style.display = 'block';
 }
 
-// Blokir Tombol Kombinasi Desktop (Ctrl+C, Ctrl+V, F12, Ctrl+U)
+// --- METHOD: SELESAI MANUAL ---
+function konfirmasiSelesai() {
+    const yakin = confirm("Apakah Anda yakin sudah menyelesaikan seluruh lembar ujian?");
+    if (yakin) {
+        akhiriUjian();
+    }
+}
+
+function akhiriUjian() {
+    ujianBerjalan = false;
+    window.onbeforeunload = null;
+
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+
+    document.getElementById('exam-popup').innerHTML = '';
+    document.getElementById('exam-popup').style.display = 'none';
+
+    document.getElementById('login-container').innerHTML = `
+        <h2 style="color: green; margin-top: 20px;">UJIAN SELESAI</h2>
+        <p style="color: #333;">Terima kasih, data ujian Anda telah disimpan.</p>
+        <p>Silakan menutup halaman ini dengan tenang.</p>
+    `;
+    document.getElementById('login-container').style.display = 'block';
+}
+
+// --- SECURITY SHORTCUT KEY & MOUSE BLOKER ---
 document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 's')) {
+    if (e.ctrlKey && ['c','v','u','s','p'].includes(e.key.toLowerCase())) {
         e.preventDefault();
     }
-    if (e.key === 'F12') {
-        e.preventDefault();
-    }
+    if (e.key === 'F12') e.preventDefault();
 });
 
-// Konfirmasi Keamanan saat Refresh / Menutup Browser secara Sengaja
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+});
+
 window.onbeforeunload = function() {
     if (ujianBerjalan) {
         return "Ujian sedang berlangsung! Riwayat pengerjaan Anda berisiko hilang.";
