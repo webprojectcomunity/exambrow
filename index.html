@@ -177,6 +177,40 @@ let sedangMemulihkanFullscreen = false;
 let batasLebarMinimal = 0;
 let batasTinggiMinimal = 0;
 
+// --- METHOD: SOUND ALERT ENGINE (WEB AUDIO API) ---
+function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
+    try {
+        // Inisialisasi Audio Context bawaan browser secara real-time
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = "sine"; // Jenis gelombang suara standar (jernih dan menusuk)
+        oscillator.frequency.value = frekuensi; // Frekuensi Hz (semakin tinggi, semakin melengking)
+        
+        // Atur kontrol volume utama (1 = 100%)
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        // Efek transisi linear menurun agar suara tidak menghasilkan letupan statis di akhir (fade-out)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durasi / 1000);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + durasi / 1000);
+    } catch (e) {
+        console.error("Gagal memicu osilator audio otomatis. Diblokir kebijakan privasi browser.", e);
+    }
+}
+
+// Fungsi untuk membuat alarm bip beruntun (Double Beep efek kepanikan)
+function picuAlarmKecurangan() {
+    mainkanSuaraBip(250, 1100); // Bip pertama
+    setTimeout(() => {
+        mainkanSuaraBip(450, 1300); // Bip kedua lebih tinggi dan panjang
+    }, 300);
+}
+
 // --- METHOD: LOAD CONFIG UTAMA ---
 window.addEventListener("DOMContentLoaded", function () {
     
@@ -351,11 +385,14 @@ window.addEventListener('blur', function() {
     }, 400);
 });
 
-// 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan
+// 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan + Bunyi Alarm
 function catatPelanggaran(alasan) {
     if (!ujianBerjalan) return;
     
     batasPelanggaran--;
+    
+    // Picu alarm suara bip melengking sesaat setelah kecurangan terekam
+    picuAlarmKecurangan();
     
     if (batasPelanggaran > 0) {
         document.getElementById('modal-message').innerText = alasan;
@@ -386,6 +423,9 @@ function portalTerkunci() {
     ujianBerjalan = false;
     window.onbeforeunload = null; 
     
+    // Bunyikan alarm bip panjang penanda diskualifikasi
+    mainkanSuaraBip(1200, 1500);
+
     const formData = new URLSearchParams();
     formData.append("action", "blokir_siswa");
     formData.append("nis", localStorage.getItem("nis"));
@@ -454,6 +494,5 @@ window.onbeforeunload = function() {
     }
 };
 </script>
-
 </body>
 </html>
