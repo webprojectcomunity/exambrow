@@ -339,29 +339,46 @@ function verifikasiToken() {
     }
 
     if (localStorage.getItem("is_blocked") === "true") {
-        alert("Akses Anda terkunci. Silakan minta pengawas untuk mengaktifkan status Anda terlebih dahulu.");
+        alert("Akses Anda terkunci. Silakan minta pengawas untuk mengaktifkan status Anda.");
         return;
     }
 
     const nis = localStorage.getItem("nis");
-    
-    // Validasi ulang secara real-time ke server sebelum mengizinkan masuk
+    const inputToken = document.getElementById("token-input").value
+        .toString().trim().replace(/\s+/g, "").toLowerCase();
+
+    if (!inputToken) {
+        alert("Token tidak boleh kosong!");
+        return;
+    }
+
+    // 1. Cek status aktif/blokir dulu
     fetch(`${API_URL}?action=check_status&nis=${nis}`)
     .then(res => res.json())
     .then(res => {
         if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
             localStorage.setItem("is_blocked", "true");
             tampilToken();
-            alert("Gagal masuk. Status Anda terdeteksi tidak aktif di database.");
+            alert("Gagal masuk. Status Anda terdeteksi tidak aktif.");
             return;
         }
 
-        const inputToken = document.getElementById("token-input").value
-            .toString().trim().replace(/\s+/g, "").toLowerCase();
+        // 2. Jika status aktif, ambil config Form Link spesifik berdasarkan token yang diinput
+        fetch(`${API_URL}?action=latest&token=${inputToken}`)
+        .then(res => res.json())
+        .then(config => {
+            if (config.error) {
+                alert("Token Salah atau Tidak Ditemukan!");
+                return;
+            }
 
-        if (inputToken === VALID_TOKEN) {
+            // Pasang link Google Form yang sesuai dengan token tersebut ke iFrame
+            document.getElementById("gform-iframe").src = config.formLink;
+            
+            // Kirim data presensi siswa ke Sheet2
             kirimDataSiswa(inputToken);
 
+            // Jalankan ujian dan masuk Fullscreen
             document.getElementById("login-container").style.display = "none";
             document.getElementById("exam-popup").style.display = "block";
 
@@ -372,12 +389,10 @@ function verifikasiToken() {
 
             ujianBerjalan = true;
             masukFullscreen();
-        } else {
-            alert("Token salah!");
-        }
+        })
+        .catch(err => alert("Gagal memvalidasi token ke server."));
     });
 }
-
 function kirimDataSiswa(token) {
     const formData = new URLSearchParams();
     formData.append("action", "add_siswa");
