@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - Portal Ujian</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f4f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 400px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+h2 { text-align: center; }
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover { background: #0056b3; }
+
+.preview {
+    width: 100%;
+    height: 150px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Admin Panel</h2>
+
+    <label>Link Google Form</label>
+    <input type="text" id="formLink" placeholder="Masukkan link Google Form">
+
+    <label>Token Ujian</label>
+    <input type="text" id="token" placeholder="Masukkan token">
+
+    <label>Upload Background</label>
+    <input type="file" id="bgFile" accept="image/*">
+
+    <div class="preview" id="preview"></div>
+
+    <button onclick="simpanData()">Simpan Pengaturan</button>
+</div>
+
+<script>
+let base64Image = "";
+
+// Preview gambar
+document.getElementById("bgFile").addEventListener("change", function(e){
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(){
+        base64Image = reader.result;
+        document.getElementById("preview").style.backgroundImage = `url(${base64Image})`;
+    }
+
+    if(file) reader.readAsDataURL(file);
+});
+
+function simpanData() {
+    const btn = document.querySelector("button");
+
+    const data = {
+        formLink: document.getElementById("formLink").value,
+        token: document.getElementById("token").value,
+        image: base64Image
+    };
+
+    if (!data.formLink || !data.token) {
+        alert("Link dan Token wajib diisi!");
+        return;
+    }
+
+    btn.innerText = "Menyimpan...";
+    btn.disabled = true;
+
+    fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.text())
+    .then(res => {
+        alert("Berhasil disimpan!");
+        btn.innerText = "Simpan Pengaturan";
+        btn.disabled = false;
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Gagal koneksi!");
+        btn.innerText = "Simpan Pengaturan";
+        btn.disabled = false;
+    });
+}
+</script>
+
+</body>
+</html>
