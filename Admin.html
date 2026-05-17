@@ -9,42 +9,44 @@
 body {
     font-family: Arial;
     background: #f4f4f9;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    margin: 0;
+    padding: 20px;
 }
 
 .container {
     background: white;
-    padding: 30px;
+    padding: 25px;
     border-radius: 10px;
-    width: 400px;
+    max-width: 600px;
+    margin: auto;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-h2 { text-align: center; }
+h2, h3 { text-align: center; }
 
 input {
     width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
+    padding: 10px;
+    margin-bottom: 12px;
     border-radius: 6px;
     border: 1px solid #ccc;
 }
 
 button {
-    width: 100%;
-    padding: 12px;
-    background: #007bff;
-    color: white;
+    padding: 10px;
     border: none;
     border-radius: 6px;
     font-weight: bold;
     cursor: pointer;
 }
 
-button:hover { background: #0056b3; }
+.save-btn {
+    width: 100%;
+    background: #007bff;
+    color: white;
+}
+
+.save-btn:hover { background: #0056b3; }
 
 .preview {
     width: 100%;
@@ -54,6 +56,36 @@ button:hover { background: #0056b3; }
     border-radius: 8px;
     margin-bottom: 15px;
 }
+
+/* TABLE */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 8px;
+    text-align: center;
+}
+
+img {
+    border-radius: 6px;
+}
+
+.action-btn {
+    padding: 5px 8px;
+    margin: 2px;
+    font-size: 12px;
+}
+
+.edit { background: orange; color: white; }
+.delete { background: red; color: white; }
+
 </style>
 </head>
 
@@ -62,24 +94,36 @@ button:hover { background: #0056b3; }
 <div class="container">
     <h2>Admin Panel</h2>
 
-    <label>Link Google Form</label>
-    <input type="text" id="formLink" placeholder="Masukkan link Google Form">
-
-    <label>Token Ujian</label>
-    <input type="text" id="token" placeholder="Masukkan token">
-
-    <label>Upload Background</label>
+    <input type="text" id="formLink" placeholder="Link Google Form">
+    <input type="text" id="token" placeholder="Token Ujian">
     <input type="file" id="bgFile" accept="image/*">
 
     <div class="preview" id="preview"></div>
 
-    <button onclick="simpanData()">Simpan Pengaturan</button>
+    <button class="save-btn" onclick="simpanData()">Simpan</button>
+
+    <h3>Data Tersimpan</h3>
+
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>Form</th>
+                <th>Token</th>
+                <th>Background</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 
 <script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
+
 let base64Image = "";
 
-// Preview gambar
+// ================= PREVIEW GAMBAR =================
 document.getElementById("bgFile").addEventListener("change", function(e){
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -92,43 +136,100 @@ document.getElementById("bgFile").addEventListener("change", function(e){
     if(file) reader.readAsDataURL(file);
 });
 
+// ================= LOAD DATA =================
+function loadData() {
+    fetch(API_URL + "?action=all")
+    .then(res => res.json())
+    .then(data => {
+
+        const tbody = document.querySelector("#dataTable tbody");
+        tbody.innerHTML = "";
+
+        data.reverse().forEach(item => {
+
+            const row = `
+                <tr>
+                    <td>${item.formLink}</td>
+                    <td>${item.token}</td>
+                    <td><img src="${item.background}" width="80"></td>
+                    <td>
+                        <button class="action-btn edit" onclick="editData(${item.row}, '${item.formLink}', '${item.token}')">Edit</button>
+                        <button class="action-btn delete" onclick="hapusData(${item.row})">Hapus</button>
+                    </td>
+                </tr>
+            `;
+
+            tbody.innerHTML += row;
+        });
+    });
+}
+
+// ================= SIMPAN =================
 function simpanData() {
-    const btn = document.querySelector("button");
 
     const formLink = document.getElementById("formLink").value;
     const token = document.getElementById("token").value;
 
     if (!formLink || !token) {
-        alert("Link dan Token wajib diisi!");
+        alert("Isi semua field!");
         return;
     }
 
-    btn.innerText = "Menyimpan...";
-    btn.disabled = true;
-
     const formData = new URLSearchParams();
+    formData.append("action", "add");
     formData.append("formLink", formLink);
     formData.append("token", token);
     formData.append("image", base64Image);
 
-    fetch("https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec", {
+    fetch(API_URL, {
         method: "POST",
         body: formData
     })
-    .then(res => res.text())
-    .then(res => {
-        console.log("Response:", res);
+    .then(() => {
         alert("Berhasil disimpan!");
-        btn.innerText = "Simpan Pengaturan";
-        btn.disabled = false;
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Gagal koneksi!");
-        btn.innerText = "Simpan Pengaturan";
-        btn.disabled = false;
+        loadData();
     });
 }
+
+// ================= HAPUS =================
+function hapusData(row) {
+    if (!confirm("Yakin hapus data?")) return;
+
+    const formData = new URLSearchParams();
+    formData.append("action", "delete");
+    formData.append("row", row);
+
+    fetch(API_URL, {
+        method: "POST",
+        body: formData
+    })
+    .then(() => loadData());
+}
+
+// ================= EDIT =================
+function editData(row, formLink, token) {
+
+    const newForm = prompt("Edit Form Link:", formLink);
+    const newToken = prompt("Edit Token:", token);
+
+    if (!newForm || !newToken) return;
+
+    const formData = new URLSearchParams();
+    formData.append("action", "update");
+    formData.append("row", row);
+    formData.append("formLink", newForm);
+    formData.append("token", newToken);
+
+    fetch(API_URL, {
+        method: "POST",
+        body: formData
+    })
+    .then(() => loadData());
+}
+
+// ================= INIT =================
+loadData();
+
 </script>
 
 </body>
