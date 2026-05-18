@@ -122,6 +122,27 @@ iframe {
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 #btn-selesai:hover { background: #c82333; }
+
+/* DESIGN TOMBOL SENSOR WAKTU MUNDUR MELAYANG */
+#timer-container {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: #212529;
+    color: #00ffcc;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    border: 2px solid #343a40;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 1px;
+}
 </style>
 </head>
 
@@ -146,6 +167,10 @@ iframe {
 
 <!-- ================= STAGE 3: HALAMAN UJIAN (IFRAME) ================= -->
 <div id="exam-popup">
+    <!-- Waktu Mundur Melayang -->
+    <div id="timer-container">
+        <span>⏱️</span> <span id="countdown-display">00:00:00</span>
+    </div>
     <iframe id="gform-iframe" allow="fullscreen"></iframe>
     <button id="btn-selesai" onclick="konfirmasiSelesai()">Selesai Ujian</button>
 </div>
@@ -160,7 +185,7 @@ iframe {
     </div>
 </div>
 
-    <!-- MODAL POPUP BERTINGKAT PORTAL UJIAN -->
+<!-- MODAL POPUP BERTINGKAT PORTAL UJIAN -->
 <div id="quizModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
     
     <!-- BOX POPUP SESI 1: INFORMASI SOAL -->
@@ -224,6 +249,10 @@ let batasTinggiMinimal = 0;
 // Variabel Alur Validasi Modal Terbuka
 let linkFormUjianAktif = "";
 let tokenUjianAktif = "";
+
+// Variabel Penampung Engine Waktu Mundur
+let sisaWaktuDetik = 0;
+let intervalTimer = null;
 
 // --- METHOD: SOUND ALERT ENGINE (WEB AUDIO API) ---
 function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
@@ -425,9 +454,13 @@ function verifikasiToken() {
             linkFormUjianAktif = config.formLink;
             tokenUjianAktif = inputToken;
 
+            // Ambil parameter durasi menit dari server dan konversi ke bilangan bulat detik
+            const durasiMenit = parseInt(config.durasi) || 0;
+            sisaWaktuDetik = durasiMenit * 60;
+
             // Masukkan data teks mapel dan durasi ke dalam Popup Sesi 1
             document.getElementById("modalMapel").innerText = config.mapel || "Mata Pelajaran";
-            document.getElementById("modalDurasi").innerText = config.durasi || "0";
+            document.getElementById("modalDurasi").innerText = durasiMenit;
 
             // Munculkan kontainer overlay popup melayang (Sesi 1 Aktif)
             document.getElementById("quizModalOverlay").style.setProperty("display", "flex", "important");
@@ -486,6 +519,103 @@ function mulaiUjianResmi() {
     // 6. Jalankan Engine Proteksi Anti-Curang & Eksekusi Mode Fullscreen
     ujianBerjalan = true;
     masukFullscreen();
+
+    // 7. Nyalakan Engine Penghitung Waktu Mundur
+    jalankanEngineTimer();
+}
+
+// ================= LOGIKA LOG ENGINE TIME COUNTDOWN =================
+function jalankanEngineTimer() {
+    // Bersihkan interval sebelumnya jika ada sisa kebocoran state runtime
+    if (intervalTimer) clearInterval(intervalTimer);
+
+    // Render data awal ke komponen display HTML secara langsung
+    perbaruiTampilanMundur();
+
+    // Loop interval detak waktu per 1 detik (1000 milidetik)
+    intervalTimer = setInterval(() => {
+        if (!ujianBerjalan) {
+            clearInterval(intervalTimer);
+            return;
+        }
+
+        sisaWaktuDetik--;
+
+        // Render perubahan digit waktu terkini ke layar browser siswa
+        perbaruiTampilanMundur();
+
+        // Evaluasi kondisi kritis jika durasi pengerjaan resmi habis (Trigger Selesai Otomatis)
+        if (sisaWaktuDetik <= 0) {
+            clearInterval(intervalTimer);
+            ujianBerjalan = false;
+            eksekusiWaktuHabisOtomatis();
+        }
+    }, 1000);
+}
+
+function perbaruiTampilanMundur() {
+    if (sisaWaktuDetik < 0) return;
+
+    // Kalkulasi matematika parsing total detik ke format Jam, Menit, Detik
+    const jam = Math.floor(sisaWaktuDetik / 3600);
+    const menit = Math.floor((sisaWaktuDetik % 3600) / 60);
+    const detik = sisaWaktuDetik % 60;
+
+    // Lakukan padding string agar menghasilkan visual dua digit (contoh: 02:05:09)
+    const displayJam = jam.toString().padStart(2, '0');
+    const displayMenit = menit.toString().padStart(2, '0');
+    const displayDetik = detik.toString().padStart(2, '0');
+
+    const formatWaktu = `${displayJam}:${displayMenit}:${displayDetik}`;
+    document.getElementById("countdown-display").innerText = formatWaktu;
+
+    // Manajemen visual penanda warna kritis jika waktu di bawah atau sama dengan 5 menit (300 detik)
+    if (sisaWaktuDetik <= 300) {
+        const timerBox = document.getElementById("timer-container");
+        if (timerBox) {
+            timerBox.style.color = "#ff4d4d";
+            timerBox.style.borderColor = "#dc3545";
+        }
+    }
+}
+
+function eksekusiWaktuHabisOtomatis() {
+    // Matikan pencegah reload halaman agar tidak tersangkut
+    window.onbeforeunload = null;
+
+    // Paksa browser keluar dari mode Fullscreen dengan aman
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+
+    // Kunci status pengerjaan lokal siswa
+    localStorage.setItem("is_blocked", "true");
+
+    // Siapkan payload data laporan penutupan otomatis karena waktu habis ke Server GAS
+    const formData = new URLSearchParams();
+    formData.append("action", "blokir_siswa");
+    formData.append("nis", localStorage.getItem("nis"));
+    formData.append("nama", localStorage.getItem("nama"));
+    formData.append("alasan", "Waktu pengerjaan ujian telah habis (Sistem Keluar Otomatis)");
+
+    // Kosongkan muatan iframe dan tutup layar ujian seketika demi mencegah manipulasi susulan
+    document.getElementById('exam-popup').innerHTML = '';
+    document.getElementById('exam-popup').style.display = 'none';
+
+    // Tampilkan pesan penutupan resmi pada kotak utama login container
+    document.getElementById('login-container').innerHTML = `
+        <h2 style="color: #dc3545; margin-top: 20px;">WAKTU UJIAN HABIS</h2>
+        <p style="color: #333; font-weight: bold;">Sistem telah menutup lembar pengerjaan Anda secara otomatis.</p>
+        <p>Seluruh log durasi dan status presensi Anda telah diamankan ke server.</p>
+    `;
+    document.getElementById('login-container').style.display = 'block';
+
+    // Kirim sinkronisasi data ke database spreadsheet backend secara asynchronous
+    fetch(API_URL, { method: "POST", body: formData })
+    .then(() => console.log("Log sinkronisasi auto-exit akibat durasi habis sukses terkirim."))
+    .catch(err => console.error("Gagal mengirim data penutupan waktu ke server:", err));
+    
+    alert("Waktu pengerjaan Anda telah habis! Sistem menutup halaman ujian secara otomatis.");
 }
 
 function kirimDataSiswa(token) {
@@ -588,6 +718,7 @@ function tutupModalPeringatan() {
 function portalTerkunci() {
     ujianBerjalan = false;
     window.onbeforeunload = null; 
+    if (intervalTimer) clearInterval(intervalTimer);
     
     mainkanSuaraBip(1200, 1500);
     
@@ -627,6 +758,7 @@ function konfirmasiSelesai() {
 function akhiriUjian() {
     ujianBerjalan = false;
     window.onbeforeunload = null;
+    if (intervalTimer) clearInterval(intervalTimer);
 
     if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
