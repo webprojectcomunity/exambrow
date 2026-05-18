@@ -168,12 +168,12 @@ iframe {
 
 <body>
 
-<div id="identitas-box" class="box">
+<div id="identitas-box" class="box" style="display:none;">
     <h3>Identitas Siswa</h3>
     <input type="text" id="nama" placeholder="Nama">
     <input type="text" id="nis" placeholder="NIS">
     <input type="text" id="kelas" placeholder="Kelas">
-    <button onclick="simpanIdentitas()">Lanjutkan</button>
+    <button id="btn-lanjut-identitas" onclick="simpanIdentitas()">Lanjutkan</button>
 </div>
 
 <div id="login-container" class="box" style="display:none;">
@@ -232,14 +232,6 @@ iframe {
         <button onclick="mulaiUjianResmi()" style="width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 4px 10px rgba(40,167,69,0.3);">Saya Paham</button>
     </div>
 </div>
-
-<!-- Animasi Masuk Ringan -->
-<style>
-@keyframes modalSwoosh {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-    
-}
     
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
