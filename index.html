@@ -124,14 +124,15 @@ iframe {
 #btn-selesai:hover { background: #c82333; }
 
 /* PERUBAHAN: SEKARANG POSISI DI SEBELAH KANAN ATAS */
+/* --- TIMER UNTUK LAYAR DESTOP (DEFAULT) --- */
 #timer-container {
     position: fixed;
     top: 20px;
-    right: 20px; /* Diubah dari left ke right */
+    right: 20px;
     z-index: 1000;
     background: #212529;
     color: #00ffcc;
-    padding: 10px 20px;
+    padding: 10px 18px;
     border-radius: 8px;
     font-family: 'Courier New', Courier, monospace;
     font-size: 18px;
@@ -142,6 +143,21 @@ iframe {
     align-items: center;
     gap: 8px;
     letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+/* --- RESPONSIVITAS OTOMATIS UNTUK ANDROID / HP (MAKSIMAL LEBAR LAYAR 768px) --- */
+@media screen and (max-width: 768px) {
+    #timer-container {
+        top: 10px;          /* Lebih merapat ke atas */
+        right: 10px;        /* Lebih merapat ke kanan */
+        padding: 6px 12px;  /* Kotak diperkecil */
+        font-size: 14px;    /* Ukuran teks angka diperkecil agar tidak penuh */
+        border-radius: 5px; /* Kelengkungan sudut disesuaikan */
+        border-width: 1px;  /* Garis tepi lebih tipis */
+        gap: 4px;           /* Jarak ikon dan teks lebih rapat */
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
 }
 </style>
 </head>
