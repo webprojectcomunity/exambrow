@@ -446,7 +446,7 @@ function verifikasiToken() {
         return;
     }
 
-    // 1. Cek status aktif/blokir dulu
+    // 1. Cek status aktif/blokir dulu sebelum masuk pengerjaan
     fetch(`${API_URL}?action=check_status&nis=${nis}`)
     .then(res => res.json())
     .then(res => {
@@ -457,8 +457,8 @@ function verifikasiToken() {
             return;
         }
 
-        // 2. Jika status aktif, ambil config Form Link spesifik berdasarkan token yang diinput
-        fetch(`${API_URL}?action=latest&token=${inputToken}`)
+        // 2. Jika status aktif, ambil config Form Link spesifik dengan menyertakan token DAN nis untuk sisa waktu potongan
+        fetch(`${API_URL}?action=latest&token=${inputToken}&nis=${nis}`)
         .then(res => res.json())
         .then(config => {
             if (config.error) {
@@ -466,17 +466,23 @@ function verifikasiToken() {
                 return;
             }
 
+            // Ambil parameter durasi hasil kalkulasi log waktu dari server
+            const durasiMenit = parseInt(config.durasi) || 0;
+
+            if (durasiMenit <= 0) {
+                alert("Waktu pengerjaan Anda untuk sesi token ini sudah habis berdasarkan perhitungan durasi sistem!");
+                portalTerkunciTolakWaktu();
+                return;
+            }
+
             // Simpan data lembar kerja sementara ke memori global
             linkFormUjianAktif = config.formLink;
             tokenUjianAktif = inputToken;
-
-            // Ambil parameter durasi menit dari server dan konversi ke bilangan bulat detik
-            const durasiMenit = parseInt(config.durasi) || 0;
             sisaWaktuDetik = durasiMenit * 60;
 
             // Masukkan data teks mapel dan durasi ke dalam Popup Sesi 1
             document.getElementById("modalMapel").innerText = config.mapel || "Mata Pelajaran";
-            document.getElementById("modalDurasi").innerText = durasiMenit;
+            document.getElementById("modalDurasi").innerText = config.isSusulan ? `${durasiMenit} Menit (Sisa Potongan)` : `${durasiMenit} Menit`;
 
             // Munculkan kontainer overlay popup melayang (Sesi 1 Aktif)
             document.getElementById("quizModalOverlay").style.setProperty("display", "flex", "important");
@@ -613,6 +619,7 @@ function eksekusiWaktuHabisOtomatis() {
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("alasan", "Waktu pengerjaan ujian telah habis (Sistem Keluar Otomatis)");
+    formData.append("sisa_waktu", "00:00:00"); // Mengisi Kolom G dengan nilai kosong/habis
 
     // Kosongkan muatan iframe dan tutup layar ujian seketika demi mencegah manipulasi susulan
     document.getElementById('exam-popup').innerHTML = '';
@@ -730,7 +737,7 @@ function tutupModalPeringatan() {
     }, 600);
 }
 
-// 6. Eksekusi Sanksi Penguncian & Kirim Sinyal Blokir Ke Server GAS
+// 6. PERBAHARUAN: EKSEKUSI SANKSI PENGUNCIAN & KIRIM SISA WAKTU KE KOLOM G
 function portalTerkunci() {
     ujianBerjalan = false;
     window.onbeforeunload = null; 
@@ -741,11 +748,18 @@ function portalTerkunci() {
     // Set flag terblokir permanen di browser lokal siswa
     localStorage.setItem("is_blocked", "true");
 
+    // Parsing sisa detik berjalan ke format string HH:MM:SS untuk dioper ke database
+    const jam = Math.floor(sisaWaktuDetik / 3600).toString().padStart(2, '0');
+    const menit = Math.floor((sisaWaktuDetik % 3600) / 60).toString().padStart(2, '0');
+    const detik = (sisaWaktuDetik % 60).toString().padStart(2, '0');
+    const teksSisaWaktu = `${jam}:${menit}:${detik}`;
+
     const formData = new URLSearchParams();
     formData.append("action", "blokir_siswa");
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("alasan", "Kecurangan Layar Ganda / Split-Screen / Kehilangan Fokus Berulang");
+    formData.append("sisa_waktu", teksSisaWaktu); // Dikirim ke kolom G spreadsheet
 
     fetch(API_URL, { method: "POST", body: formData })
     .then(() => {
@@ -758,9 +772,24 @@ function portalTerkunci() {
         
         // Reset input token dan bekukan kolomnya
         tampilToken();
-        alert("Akses Anda telah diblokir secara permanen! Halaman dikembalikan ke menu awal.");
+        alert(`Akses Anda telah diblokir! Sisa waktu terakhir Anda (${teksSisaWaktu}) telah disimpan ke server.`);
     })
     .catch(err => console.error("Gagal kirim log blokir:", err));
+}
+
+// Fungsi proteksi tambahan jika ketika login ulang akumulasi waktu susulan siswa sudah 0
+function portalTerkunciTolakWaktu() {
+    const formData = new URLSearchParams();
+    formData.append("action", "blokir_siswa");
+    formData.append("nis", localStorage.getItem("nis"));
+    formData.append("nama", localStorage.getItem("nama"));
+    formData.append("alasan", "Ditolak masuk karena akumulasi waktu log pengerjaan telah habis");
+    formData.append("sisa_waktu", "00:00:00");
+
+    fetch(API_URL, { method: "POST", body: formData })
+    .then(() => {
+        tampilToken();
+    });
 }
 
 // --- METHOD: SELESAI MANUAL ---
@@ -783,12 +812,13 @@ function akhiriUjian() {
     // Set flag status tidak aktif/terkunci di lokal agar tidak bisa masuk lagi tanpa reset pengawas
     localStorage.setItem("is_blocked", "true");
 
-    // Kirim sinyal ke server GAS untuk mengubah status menjadi 'Tidak Aktif' dan mengisi catatan
+    // Kirim sinyal ke server GAS untuk mengubah status menjadi 'Tidak Aktif' dan mengisi catatan + sisa waktu sisa
     const formData = new URLSearchParams();
-    formData.append("action", "blokir_siswa"); // Memanfaatkan engine action yang sama untuk mengubah status di Sheet
+    formData.append("action", "blokir_siswa"); 
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("nama", localStorage.getItem("nama"));
     formData.append("alasan", "Telah menyelesaikan ujian");
+    formData.append("sisa_waktu", "00:00:00"); // Dianggap selesai penuh
 
     fetch(API_URL, { method: "POST", body: formData })
     .then(() => {
@@ -804,7 +834,6 @@ function akhiriUjian() {
     })
     .catch(err => {
         console.error("Gagal mengirim status selesai ke server:", err);
-        // Tetap tampilkan halaman selesai meskipun log server gagal agar siswa tidak panik
         document.getElementById('exam-popup').innerHTML = '';
         document.getElementById('exam-popup').style.display = 'none';
         
