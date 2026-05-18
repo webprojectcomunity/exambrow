@@ -123,8 +123,7 @@ iframe {
 }
 #btn-selesai:hover { background: #c82333; }
 
-/* PERUBAHAN: SEKARANG POSISI DI SEBELAH KANAN ATAS */
-/* --- TIMER UNTUK LAYAR DESTOP (DEFAULT) --- */
+/* TIMER UNTUK LAYAR DESTOP (DEFAULT) */
 #timer-container {
     position: fixed;
     top: 20px;
@@ -146,25 +145,29 @@ iframe {
     transition: all 0.3s ease;
 }
 
-/* --- RESPONSIVITAS OTOMATIS UNTUK ANDROID / HP (MAKSIMAL LEBAR LAYAR 768px) --- */
+/* RESPONSIVITAS OTOMATIS UNTUK ANDROID / HP */
 @media screen and (max-width: 768px) {
     #timer-container {
-        top: 10px;          /* Lebih merapat ke atas */
-        right: 10px;        /* Lebih merapat ke kanan */
-        padding: 6px 12px;  /* Kotak diperkecil */
-        font-size: 14px;    /* Ukuran teks angka diperkecil agar tidak penuh */
-        border-radius: 5px; /* Kelengkungan sudut disesuaikan */
-        border-width: 1px;  /* Garis tepi lebih tipis */
-        gap: 4px;           /* Jarak ikon dan teks lebih rapat */
+        top: 10px;
+        right: 10px;
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 5px;
+        border-width: 1px;
+        gap: 4px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
+}
+
+@keyframes modalSwoosh {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 </style>
 </head>
 
 <body>
 
-<!-- ================= STAGE 1: IDENTITAS ================= -->
 <div id="identitas-box" class="box">
     <h3>Identitas Siswa</h3>
     <input type="text" id="nama" placeholder="Nama">
@@ -173,17 +176,14 @@ iframe {
     <button onclick="simpanIdentitas()">Lanjutkan</button>
 </div>
 
-<!-- ================= STAGE 2: MASUKKAN TOKEN ================= -->
 <div id="login-container" class="box" style="display:none;">
     <div id="info-siswa"></div>
     <h3>Masukkan Token</h3>
     <input type="text" id="token-input" placeholder="Masukkan token">
-    <button onclick="verifikasiToken()">Mulai Ujian</button>
+    <button id="btn-login-token" onclick="verifikasiToken()">Mulai Ujian</button>
 </div>
 
-<!-- ================= STAGE 3: HALAMAN UJIAN (IFRAME) ================= -->
 <div id="exam-popup">
-    <!-- Waktu Mundur Melayang -->
     <div id="timer-container">
         <span>⏱️</span> <span id="countdown-display">00:00:00</span>
     </div>
@@ -191,7 +191,6 @@ iframe {
     <button id="btn-selesai" onclick="konfirmasiSelesai()">Selesai Ujian</button>
 </div>
 
-<!-- ================= KOTAK PERINGATAN KUSTOM ================= -->
 <div id="custom-modal">
     <div class="modal-content">
         <h3>PERINGATAN PELANGGARAN!</h3>
@@ -201,10 +200,8 @@ iframe {
     </div>
 </div>
 
-<!-- MODAL POPUP BERTINGKAT PORTAL UJIAN -->
 <div id="quizModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
     
-    <!-- BOX POPUP SESI 1: INFORMASI SOAL -->
     <div id="popupSesi1" style="display: block; background: white; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; animation: modalSwoosh 0.3s ease;">
         <div style="font-size: 50px; margin-bottom: 10px;">📝</div>
         <h3 style="margin-top: 0; color: #333; font-size: 20px;">Konfirmasi Data Ujian</h3>
@@ -222,7 +219,6 @@ iframe {
         </div>
     </div>
 
-    <!-- BOX POPUP SESI 2: PERINGATAN KECURANGAN -->
     <div id="popupSesi2" style="display: none; background: white; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; animation: modalSwoosh 0.3s ease;">
         <div style="font-size: 50px; margin-bottom: 10px;">⚠️</div>
         <h3 style="margin-top: 0; color: #dc3545; font-size: 20px;">WARNING / PERINGATAN!</h3>
@@ -242,10 +238,9 @@ iframe {
 @keyframes modalSwoosh {
     from { transform: scale(0.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
-}
-</style>
     
-<!-- ================= SEGMEN SKRIP UTAMA PORTAL ================= -->
+}
+    
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
@@ -425,7 +420,7 @@ function tampilToken() {
     }
 }
 
-// --- AMBIL CONFIG + LOGIN & INTEGRASI POPUP BERTINGKAT ---
+// --- AMBIL CONFIG + LOGIN & INTEGRASI POPUP BERTINGKAT (DENGAN PROTEKSI DOUBLE USER) ---
 function verifikasiToken() {
     if (!DATA_LOADED) {
         alert("Data server belum siap, mohon tunggu beberapa detik...");
@@ -438,6 +433,7 @@ function verifikasiToken() {
     }
 
     const nis = localStorage.getItem("nis");
+    const namaSiswa = localStorage.getItem("nama");
     const inputToken = document.getElementById("token-input").value
         .toString().trim().replace(/\s+/g, "").toLowerCase();
 
@@ -446,18 +442,25 @@ function verifikasiToken() {
         return;
     }
 
-    // 1. Cek status aktif/blokir dulu sebelum masuk pengerjaan
+    // 1. Cek status aktif/blokir DAN deteksi double login (Multi-Device)
     fetch(`${API_URL}?action=check_status&nis=${nis}`)
     .then(res => res.json())
     .then(res => {
+        // Logika Blokir Umum dari Pengawas
         if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
             localStorage.setItem("is_blocked", "true");
             tampilToken();
-            alert("Gagal masuk. Status Anda terdeteksi tidak aktif.");
+            alert("Gagal masuk. Status Anda terdeteksi tidak aktif atau diblokir.");
             return;
         }
 
-        // 2. Jika status aktif, ambil config Form Link spesifik dengan menyertakan token DAN nis untuk sisa waktu potongan
+        // ALGORITMA DOUBLE USER: Jika STATUS = Aktif dan CATATAN = Memulai Ujian (sedang ujian di perangkat lain)
+        if (res.status === "Aktif" && res.catatan === "Memulai Ujian") {
+            alert(`TOLAK AKSES!\nSiswa dengan NIS: ${nis} dan Nama: ${namaSiswa} terdeteksi sedang AKTIF mengikuti ujian di perangkat/tab lain.\n\nJika ini adalah kesalahan teknis (browser Anda sempat tertutup), silakan lapor ke pengawas untuk mereset status presensi Anda terlebih dahulu.`);
+            return;
+        }
+
+        // 2. Jika validasi lolos, ambil konfigurasi tautan soal
         fetch(`${API_URL}?action=latest&token=${inputToken}&nis=${nis}`)
         .then(res => res.json())
         .then(config => {
@@ -525,7 +528,7 @@ function mulaiUjianResmi() {
     // 2. Terapkan link Google Form ke iFrame utama
     document.getElementById("gform-iframe").src = linkFormUjianAktif;
 
-    // 3. Kirim data kehadiran (presensi) siswa ke Sheet2
+    // 3. Kirim data kehadiran (presensi) siswa ke Sheet2 -> Di sini status diubah menjadi 'Aktif' dan Catatan menjadi 'Memulai Ujian'
     kirimDataSiswa(tokenUjianAktif);
 
     // 4. Tukar layar utama login ke lembar kerja ujian (Exam Box)
@@ -648,6 +651,7 @@ function kirimDataSiswa(token) {
     formData.append("nis", localStorage.getItem("nis"));
     formData.append("kelas", localStorage.getItem("kelas"));
     formData.append("token", token);
+    formData.append("catatan", "Memulai Ujian"); // Penanda eksplisit bahwa siswa sedang aktif ngerjakan
 
     fetch(API_URL, { method: "POST", body: formData })
     .then(res => res.text())
@@ -737,7 +741,7 @@ function tutupModalPeringatan() {
     }, 600);
 }
 
-// 6. PERBAHARUAN: EKSEKUSI SANKSI PENGUNCIAN & KIRIM SISA WAKTU KE KOLOM G
+// 6. EKSEKUSI SANKSI PENGUNCIAN & KIRIM SISA WAKTU KE KOLOM G
 function portalTerkunci() {
     ujianBerjalan = false;
     window.onbeforeunload = null; 
@@ -763,14 +767,12 @@ function portalTerkunci() {
 
     fetch(API_URL, { method: "POST", body: formData })
     .then(() => {
-        // Balikkan halaman ke tampilan input token yang sekarang sudah terkunci
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(() => {});
         }
         document.getElementById('exam-popup').innerHTML = '';
         document.getElementById('exam-popup').style.display = 'none';
         
-        // Reset input token dan bekukan kolomnya
         tampilToken();
         alert(`Akses Anda telah diblokir! Sisa waktu terakhir Anda (${teksSisaWaktu}) telah disimpan ke server.`);
     })
