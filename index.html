@@ -704,32 +704,45 @@ window.addEventListener('blur', function() {
 });
 
 // 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan + Bunyi Alarm
+// 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan + Bunyi Alarm
 function catatPelanggaran(alasan) {
     if (!ujianBerjalan) return;
-    
-    batasPelanggaran--;
-    picuAlarmKecurangan();
-    
+
+    // Kurangi kesempatan tapi jangan sampai minus
     if (batasPelanggaran > 0) {
-        document.getElementById('modal-message').innerText = alasan;
-        document.getElementById('modal-chance').innerText = batasPelanggaran;
-        document.getElementById('custom-modal').style.display = 'flex';
+        batasPelanggaran--;
+    }
+
+    picuAlarmKecurangan();
+
+    if (batasPelanggaran > 0) {
+        const modalMsg = document.getElementById('modal-message');
+        const modalChance = document.getElementById('modal-chance');
+        const modal = document.getElementById('custom-modal');
+
+        if (modalMsg) modalMsg.innerText = alasan;
+        if (modalChance) modalChance.innerText = batasPelanggaran;
+        if (modal) modal.style.display = 'flex';
     } else {
         portalTerkunci();
     }
 }
 
 function tutupModalPeringatan() {
-    document.getElementById('custom-modal').style.display = 'none';
-    sedangMemulihkanFullscreen = true; 
+    const modal = document.getElementById('custom-modal');
+    if (modal) modal.style.display = 'none';
+
+    sedangMemulihkanFullscreen = true;
     masukFullscreen();
-    
+
     setTimeout(() => { 
         const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
         const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
+
         batasLebarMinimal = lebarAsli * 0.85;
         batasTinggiMinimal = tinggiAsli * 0.85;
-        sedangMemulihkanFullscreen = false; 
+
+        sedangMemulihkanFullscreen = false;
     }, 600);
 }
 
