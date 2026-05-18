@@ -3,229 +3,208 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel - Portal Ujian</title>
+<title>Portal Ujian Terproteksi</title>
 
 <style>
 body {
     font-family: Arial, sans-serif;
     background: #f4f4f9;
     margin: 0;
-    padding: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.container {
+/* BOX CONTAINER */
+.box {
     background: white;
-    padding: 20px;
+    padding: 25px;
     border-radius: 10px;
-    max-width: 1000px;
-    margin: auto;
+    width: 350px;
+    text-align: center;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-h2, h3 {
-    text-align: center;
-    color: #333;
-}
-
-.form-group {
-    margin-bottom: 12px;
-}
-
-label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #444;
-    display: block;
-    margin-bottom: 5px;
-}
-
+/* INPUT SYSTEM */
 input {
-    width: 100%;
+    width: 90%;
     padding: 10px;
+    margin: 10px 0;
     border-radius: 6px;
     border: 1px solid #ccc;
     box-sizing: border-box;
 }
 
-.row-inputs {
-    display: flex;
-    gap: 15px;
-}
-
-.row-inputs .form-group {
-    flex: 1;
-}
-
+/* BUTTON SYSTEM */
 button {
     padding: 10px;
+    width: 95%;
+    background: #28a745;
+    color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
 }
 
-.save-btn {
-    width: 100%;
-    background: #007bff;
-    color: white;
-    font-size: 16px;
-    margin-top: 10px;
+button:hover {
+    background: #218838;
 }
 
-.save-btn:hover {
-    background: #0056b3;
-}
-
-.cancel-btn {
-    width: 100%;
-    background: #6c757d;
-    color: white;
-    font-size: 16px;
-    margin-top: 8px;
+/* CONTAINER IFRAME UJIAN */
+#exam-popup {
     display: none;
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background:white;
+    z-index: 999;
 }
 
-.cancel-btn:hover {
-    background: #5a6268;
+iframe {
+    width:100%;
+    height:100%;
+    border:none;
 }
 
-/* BAGIAN KONTROL BG */
-.bg-management-box {
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 8px;
-    background: #fafafa;
-    margin-top: 15px;
-    margin-bottom: 15px;
-}
-
-.preview {
-    width: 100%;
-    height: 140px;
-    background-size: cover;
-    background-position: center;
-    border-radius: 8px;
-    margin-top: 10px;
-    border: 1px dashed #ccc;
-    background-color: #f0f0f0;
-}
-
-.table-container {
-    overflow-x: auto;
-    margin-top: 20px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th, td {
-    border: 1px solid #ddd;
-    padding: 10px;
-    text-align: center;
+/* INFO IDENTITAS SISWA */
+#info-siswa {
     font-size: 13px;
-}
-
-th {
-    background-color: #f1f1f1;
-}
-
-td {
-    max-width: 180px;
-    word-break: break-word;
-}
-
-img {
-    max-width: 70px;
-    max-height: 70px;
+    margin-bottom: 10px;
+    color: #333;
+    text-align: left;
+    background: #f8f9fa;
+    padding: 10px;
     border-radius: 6px;
-    object-fit: cover;
-    display: block;
-    margin: auto;
+    border: 1px solid #eee;
 }
 
-.action-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-    margin: 2px;
+/* KOTAK DIALOG PERINGATAN KUSTOM (MODAL) */
+#custom-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.modal-content h3 { color: #dc3545; margin-top: 0; }
+.modal-content p { color: #333; font-size: 15px; line-height: 1.5; }
+.modal-content button { 
+    background: #007bff; 
+    width: auto; 
+    padding: 10px 20px; 
+}
+.modal-content button:hover { background: #0056b3; }
 
-.edit { background: #ffc107; color: black; }
-.edit:hover { background: #e0a800; }
-
-.delete { background: #dc3545; color: white; }
-.delete:hover { background: #c82333; }
-
-.bg-upload { background: #28a745; color: white; }
-.bg-upload:hover { background: #218838; }
-
-.bg-delete { background: #fd7e14; color: white; }
-.bg-delete:hover { background: #da680e; }
+/* TOMBOL SELESAI UJIAN MELAYANG */
+#btn-selesai {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: auto;
+    background: #dc3545;
+    padding: 12px 25px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+#btn-selesai:hover { background: #c82333; }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-    <h2>Admin Panel - Portal Ujian</h2>
+<!-- ================= STAGE 1: IDENTITAS ================= -->
+<div id="identitas-box" class="box">
+    <h3>Identitas Siswa</h3>
+    <input type="text" id="nama" placeholder="Nama">
+    <input type="text" id="nis" placeholder="NIS">
+    <input type="text" id="kelas" placeholder="Kelas">
+    <button onclick="simpanIdentitas()">Lanjutkan</button>
+</div>
 
-    <!-- Input Data Utama Ujian -->
-    <div class="form-group">
-        <label for="formLink">Link Google Form</label>
-        <input type="text" id="formLink" placeholder="https://docs.google.com/forms/.../viewform">
-    </div>
+<!-- ================= STAGE 2: MASUKKAN TOKEN ================= -->
+<div id="login-container" class="box" style="display:none;">
+    <div id="info-siswa"></div>
+    <h3>Masukkan Token</h3>
+    <input type="text" id="token-input" placeholder="Masukkan token">
+    <button onclick="verifikasiToken()">Mulai Ujian</button>
+</div>
 
-    <div class="form-group">
-        <label for="token">Token Ujian</label>
-        <input type="text" id="token" placeholder="Contoh: uas2026">
-    </div>
+<!-- ================= STAGE 3: HALAMAN UJIAN (IFRAME) ================= -->
+<div id="exam-popup">
+    <iframe id="gform-iframe" allow="fullscreen"></iframe>
+    <button id="btn-selesai" onclick="konfirmasiSelesai()">Selesai Ujian</button>
+</div>
 
-    <div class="row-inputs">
-        <div class="form-group">
-            <label for="mapel">Mata Pelajaran</label>
-            <input type="text" id="mapel" placeholder="Contoh: Matematika Peminatan">
-        </div>
-        <div class="form-group">
-            <label for="durasi">Durasi Waktu</label>
-            <input type="text" id="durasi" placeholder="Contoh: 90 Menit">
-        </div>
-    </div>
-
-    <!-- Kotak Manajemen File Terpisah -->
-    <div class="bg-management-box">
-        <label style="margin-bottom: 8px;">Pengaturan File Gambar Background</label>
-        <input type="file" id="bgFile" accept="image/*">
-        <div class="preview" id="preview"></div>
-        <p id="bg-info-status" style="font-size: 11px; color: #666; margin: 5px 0 0 0;">
-            *Gambar di atas hanya akan diproses jika Anda menekan tombol bertanda khusus hijau/oranye di tabel aksi data bawah.
-        </p>
-    </div>
-
-    <button class="save-btn" onclick="simpanDataTeks()" id="btnSimpan">Simpan Data Baru</button>
-    <button class="cancel-btn" onclick="resetForm()" id="btnBatal">Batal / Reset Mode</button>
-
-    <h3>Data Konfigurasi Ujian Aktif</h3>
-
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Mata Pelajaran</th>
-                    <th>Durasi</th>
-                    <th>Token</th>
-                    <th>Form Link</th>
-                    <th>Background</th>
-                    <th>Aksi Kontrol</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <tr><td colspan="6">Memuat database cloud...</td></tr>
-            </tbody>
-        </table>
+<!-- ================= KOTAK PERINGATAN KUSTOM ================= -->
+<div id="custom-modal">
+    <div class="modal-content">
+        <h3>PERINGATAN PELANGGARAN!</h3>
+        <p id="modal-message">Alasan pelanggaran akan muncul di sini.</p>
+        <p><strong>Sisa kesempatan Anda: <span id="modal-chance">3</span> kali lagi.</strong></p>
+        <button onclick="tutupModalPeringatan()">Saya Mengerti & Lanjutkan</button>
     </div>
 </div>
 
+    <!-- MODAL POPUP BERTINGKAT PORTAL UJIAN -->
+<div id="quizModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
+    
+    <!-- BOX POPUP SESI 1: INFORMASI SOAL -->
+    <div id="popupSesi1" style="display: block; background: white; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; animation: modalSwoosh 0.3s ease;">
+        <div style="font-size: 50px; margin-bottom: 10px;">📝</div>
+        <h3 style="margin-top: 0; color: #333; font-size: 20px;">Konfirmasi Data Ujian</h3>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+        <p style="color: #555; line-height: 1.6; font-size: 15px; text-align: left;">
+            Kamu memilih soal dengan:
+            <br><br>
+            📌 <strong>Mata Pelajaran:</strong> <span id="modalMapel" style="color: #007bff; font-weight: bold;">-</span><br>
+            ⏱️ <strong>Waktu Pengerjaan:</strong> <span id="modalDurasi" style="color: #007bff; font-weight: bold;">-</span> Menit
+        </p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="batalUjian()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">Batal</button>
+            <button onclick="lanjutKeSesi2()" style="flex: 1; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">Lanjutkan</button>
+        </div>
+    </div>
+
+    <!-- BOX POPUP SESI 2: PERINGATAN KECURANGAN -->
+    <div id="popupSesi2" style="display: none; background: white; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; animation: modalSwoosh 0.3s ease;">
+        <div style="font-size: 50px; margin-bottom: 10px;">⚠️</div>
+        <h3 style="margin-top: 0; color: #dc3545; font-size: 20px;">WARNING / PERINGATAN!</h3>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+        <div style="color: #333; line-height: 1.6; font-size: 14px; text-align: left; background: #fff5f5; padding: 15px; border-left: 4px solid #dc3545; border-radius: 4px;">
+            Jika kamu mencoba membuka aplikasi lain, mencoba membuka tab baru, serta mencoba untuk membagi layar <strong>(split screen)</strong> sebanyak <strong>2 kali</strong>, maka sistem ini akan otomatis <strong>MEMBLOKIR</strong> akses untuk mengerjakan ujian!
+            <br><br>
+            Pastikan juga layar handphone disetting dengan durasi waktu tetap menyala, karena apabila layar mati akan dianggap melakukan pelanggaran.
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <button onclick="mulaiUjianResmi()" style="width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 4px 10px rgba(40,167,69,0.3);">Saya Paham</button>
+    </div>
+</div>
+
+<!-- Animasi Masuk Ringan -->
+<style>
+@keyframes modalSwoosh {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+</style>
+    
+<!-- ================= SEGMEN SKRIP UTAMA PORTAL ================= -->
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
@@ -241,10 +220,6 @@ let sedangMemulihkanFullscreen = false;
 // Variabel Baseline untuk Rekaman Dimensi Layar Aman
 let batasLebarMinimal = 0;
 let batasTinggiMinimal = 0;
-
-// Variabel Alur Validasi Modal Terbuka
-let linkFormUjianAktif = "";
-let tokenUjianAktif = "";
 
 // --- METHOD: SOUND ALERT ENGINE (WEB AUDIO API) ---
 function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
@@ -401,7 +376,6 @@ function tampilToken() {
     }
 }
 
-// --- AMBIL CONFIG + LOGIN & INTEGRASI POPUP BERTINGKAT ---
 function verifikasiToken() {
     if (!DATA_LOADED) {
         alert("Data server belum siap, mohon tunggu beberapa detik...");
@@ -442,71 +416,26 @@ function verifikasiToken() {
                 return;
             }
 
-            // Simpan data lembar kerja sementara ke memori global
-            linkFormUjianAktif = config.formLink;
-            tokenUjianAktif = inputToken;
+            // Pasang link Google Form yang sesuai dengan token tersebut ke iFrame
+            document.getElementById("gform-iframe").src = config.formLink;
+            
+            // Kirim data presensi siswa ke Sheet2
+            kirimDataSiswa(inputToken);
 
-            // Masukkan data teks mapel dan durasi ke dalam Popup Sesi 1
-            document.getElementById("modalMapel").innerText = config.mapel || "Mata Pelajaran";
-            document.getElementById("modalDurasi").innerText = config.durasi || "0";
+            // Jalankan ujian dan masuk Fullscreen
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("exam-popup").style.display = "block";
 
-            // Munculkan kontainer overlay popup melayang (Sesi 1 Aktif)
-            document.getElementById("quizModalOverlay").style.style.setProperty("display", "flex", "important");
-            document.getElementById("popupSesi1").style.display = "block";
-            document.getElementById("popupSesi2").style.display = "none";
+            const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
+            const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
+            batasLebarMinimal = lebarAsli * 0.85;
+            batasTinggiMinimal = tinggiAsli * 0.85;
+
+            ujianBerjalan = true;
+            masukFullscreen();
         })
         .catch(err => alert("Gagal memvalidasi token ke server."));
     });
-}
-
-// ================= FUNGSI KONTROL POPUP MODAL BERTINGKAT =================
-
-// TOMBOL: BATAL (Sesi 1)
-function batalUjian() {
-    document.getElementById("quizModalOverlay").style.setProperty("display", "none", "important");
-    document.getElementById("token-input").value = "";
-    
-    linkFormUjianAktif = "";
-    tokenUjianAktif = "";
-    console.log("Siswa membatalkan masuk ujian. Kembali ke menu token.");
-}
-
-// TOMBOL: LANJUTKAN (Sesi 1 ke Sesi 2)
-function lanjutKeSesi2() {
-    document.getElementById("popupSesi1").style.display = "none";
-    document.getElementById("popupSesi2").style.display = "block";
-}
-
-// TOMBOL: SAYA PAHAM (Sesi 2 Resmi Mulai Masuk Ujian)
-function mulaiUjianResmi() {
-    if (!linkFormUjianAktif) {
-        alert("Tautan soal bermasalah, silakan ulangi proses input token.");
-        batalUjian();
-        return;
-    }
-
-    // 1. Tutup seluruh rentetan popup melayang
-    document.getElementById("quizModalOverlay").style.setProperty("display", "none", "important");
-
-    // 2. Terapkan link Google Form ke iFrame utama
-    document.getElementById("gform-iframe").src = linkFormUjianAktif;
-
-    // 3. Kirim data kehadiran (presensi) siswa ke Sheet2
-    kirimDataSiswa(tokenUjianAktif);
-
-    // 4. Tukar layar utama login ke lembar kerja ujian (Exam Box)
-    document.getElementById("login-container").style.display = "none";
-    document.getElementById("exam-popup").style.display = "block";
-
-    // 5. Kalkulasi batas aman dimensi resolusi layar untuk deteksi Split Screen
-    const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
-    const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
-    batasLebarMinimal = lebarAsli * 0.85;
-    batasTinggiMinimal = tinggiAsli * 0.85;
-
-    // 6. Jalankan Engine Proteksi Anti-Curang & Eksekusi Mode Fullscreen
-    ujianBerjalan = true;
-    masukFullscreen();
 }
 
 function kirimDataSiswa(token) {
@@ -707,6 +636,5 @@ window.onbeforeunload = function() {
     }
 };
 </script>
-
 </body>
 </html>
