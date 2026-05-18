@@ -3,688 +3,503 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portal Ujian Terproteksi</title>
+<title>Admin Panel - Portal Ujian</title>
 
 <style>
 body {
     font-family: Arial, sans-serif;
     background: #f4f4f9;
     margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    user-select: none;
-    -webkit-user-select: none;
+    padding: 15px;
 }
 
-/* BOX CONTAINER */
-.box {
+.container {
     background: white;
-    padding: 25px;
+    padding: 20px;
     border-radius: 10px;
-    width: 350px;
-    text-align: center;
+    max-width: 1000px;
+    margin: auto;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-/* INPUT SYSTEM */
+h2, h3 {
+    text-align: center;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #444;
+    display: block;
+    margin-bottom: 5px;
+}
+
 input {
-    width: 90%;
+    width: 100%;
     padding: 10px;
-    margin: 10px 0;
     border-radius: 6px;
     border: 1px solid #ccc;
     box-sizing: border-box;
 }
 
-/* BUTTON SYSTEM */
+.row-inputs {
+    display: flex;
+    gap: 15px;
+}
+
+.row-inputs .form-group {
+    flex: 1;
+}
+
 button {
     padding: 10px;
-    width: 95%;
-    background: #28a745;
-    color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
 }
 
-button:hover {
-    background: #218838;
-}
-
-/* CONTAINER IFRAME UJIAN */
-#exam-popup {
-    display: none;
-    position: fixed;
-    top:0; left:0; width:100%; height:100%;
-    background:white;
-    z-index: 999;
-}
-
-iframe {
-    width:100%;
-    height:100%;
-    border:none;
-}
-
-/* INFO IDENTITAS SISWA */
-#info-siswa {
-    font-size: 13px;
-    margin-bottom: 10px;
-    color: #333;
-    text-align: left;
-    background: #f8f9fa;
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #eee;
-}
-
-/* KOTAK DIALOG PERINGATAN KUSTOM (MODAL) */
-#custom-modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 10000;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
-.modal-content {
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    max-width: 400px;
+.save-btn {
     width: 100%;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    background: #007bff;
+    color: white;
+    font-size: 16px;
+    margin-top: 10px;
 }
-.modal-content h3 { color: #dc3545; margin-top: 0; }
-.modal-content p { color: #333; font-size: 15px; line-height: 1.5; }
-.modal-content button { 
-    background: #007bff; 
-    width: auto; 
-    padding: 10px 20px; 
-}
-.modal-content button:hover { background: #0056b3; }
 
-/* TOMBOL SELESAI UJIAN MELAYANG */
-#btn-selesai {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-    width: auto;
-    background: #dc3545;
-    padding: 12px 25px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+.save-btn:hover {
+    background: #0056b3;
 }
-#btn-selesai:hover { background: #c82333; }
+
+.cancel-btn {
+    width: 100%;
+    background: #6c757d;
+    color: white;
+    font-size: 16px;
+    margin-top: 8px;
+    display: none;
+}
+
+.cancel-btn:hover {
+    background: #5a6268;
+}
+
+/* BAGIAN KONTROL BG */
+.bg-management-box {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    background: #fafafa;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.preview {
+    width: 100%;
+    height: 140px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    margin-top: 10px;
+    border: 1px dashed #ccc;
+    background-color: #f0f0f0;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+}
+
+th {
+    background-color: #f1f1f1;
+}
+
+td {
+    max-width: 180px;
+    word-break: break-word;
+}
+
+img {
+    max-width: 70px;
+    max-height: 70px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+    margin: auto;
+}
+
+.action-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.edit { background: #ffc107; color: black; }
+.edit:hover { background: #e0a800; }
+
+.delete { background: #dc3545; color: white; }
+.delete:hover { background: #c82333; }
+
+.bg-upload { background: #28a745; color: white; }
+.bg-upload:hover { background: #218838; }
+
+.bg-delete { background: #fd7e14; color: white; }
+.bg-delete:hover { background: #da680e; }
 </style>
 </head>
 
 <body>
 
-<!-- ================= STAGE 1: IDENTITAS ================= -->
-<div id="identitas-box" class="box">
-    <h3>Identitas Siswa</h3>
-    <input type="text" id="nama" placeholder="Nama">
-    <input type="text" id="nis" placeholder="NIS">
-    <input type="text" id="kelas" placeholder="Kelas">
-    <button onclick="simpanIdentitas()">Lanjutkan</button>
-</div>
+<div class="container">
+    <h2>Admin Panel - Portal Ujian</h2>
 
-<!-- ================= STAGE 2: MASUKKAN TOKEN ================= -->
-<div id="login-container" class="box" style="display:none;">
-    <div id="info-siswa"></div>
-    <h3>Masukkan Token</h3>
-    <input type="text" id="token-input" placeholder="Masukkan token">
-    <button onclick="verifikasiToken()">Mulai Ujian</button>
-</div>
-
-<!-- ================= STAGE 3: HALAMAN UJIAN (IFRAME) ================= -->
-<div id="exam-popup">
-    <iframe id="gform-iframe" allow="fullscreen"></iframe>
-    <button id="btn-selesai" onclick="konfirmasiSelesai()">Selesai Ujian</button>
-</div>
-
-<!-- ================= KOTAK PERINGATAN KUSTOM ================= -->
-<div id="custom-modal">
-    <div class="modal-content">
-        <h3>PERINGATAN PELANGGARAN!</h3>
-        <p id="modal-message">Alasan pelanggaran akan muncul di sini.</p>
-        <p><strong>Sisa kesempatan Anda: <span id="modal-chance">3</span> kali lagi.</strong></p>
-        <button onclick="tutupModalPeringatan()">Saya Mengerti & Lanjutkan</button>
+    <!-- Input Data Utama Ujian -->
+    <div class="form-group">
+        <label for="formLink">Link Google Form</label>
+        <input type="text" id="formLink" placeholder="https://docs.google.com/forms/.../viewform">
     </div>
-</div>
 
-    <!-- MODAL POPUP BERTINGKAT PORTAL UJIAN -->
-<div id="quizModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
-    
-    <!-- BOX POPUP SESI 1: INFORMASI SOAL -->
-    <div id="popupSesi1" style="display: block; background: white; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; animation: modalSwoosh 0.3s ease;">
-        <div style="font-size: 50px; margin-bottom: 10px;">📝</div>
-        <h3 style="margin-top: 0; color: #333; font-size: 20px;">Konfirmasi Data Ujian</h3>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-        <p style="color: #555; line-height: 1.6; font-size: 15px; text-align: left;">
-            Kamu memilih soal dengan:
-            <br><br>
-            📌 <strong>Mata Pelajaran:</strong> <span id="modalMapel" style="color: #007bff; font-weight: bold;">-</span><br>
-            ⏱️ <strong>Waktu Pengerjaan:</strong> <span id="modalDurasi" style="color: #007bff; font-weight: bold;">-</span> Menit
+    <div class="form-group">
+        <label for="token">Token Ujian</label>
+        <input type="text" id="token" placeholder="Contoh: uas2026">
+    </div>
+
+    <div class="row-inputs">
+        <div class="form-group">
+            <label for="mapel">Mata Pelajaran</label>
+            <input type="text" id="mapel" placeholder="Contoh: Matematika Peminatan">
+        </div>
+        <div class="form-group">
+            <label for="durasi">Durasi Waktu</label>
+            <input type="text" id="durasi" placeholder="Contoh: 90 Menit">
+        </div>
+    </div>
+
+    <!-- Kotak Manajemen File Terpisah -->
+    <div class="bg-management-box">
+        <label style="margin-bottom: 8px;">Pengaturan File Gambar Background</label>
+        <input type="file" id="bgFile" accept="image/*">
+        <div class="preview" id="preview"></div>
+        <p id="bg-info-status" style="font-size: 11px; color: #666; margin: 5px 0 0 0;">
+            *Gambar di atas hanya akan diproses jika Anda menekan tombol bertanda khusus hijau/oranye di tabel aksi data bawah.
         </p>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <div style="display: flex; gap: 10px;">
-            <button onclick="batalUjian()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">Batal</button>
-            <button onclick="lanjutKeSesi2()" style="flex: 1; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">Lanjutkan</button>
-        </div>
     </div>
 
-    <!-- BOX POPUP SESI 2: PERINGATAN KECURANGAN -->
-    <div id="popupSesi2" style="display: none; background: white; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; animation: modalSwoosh 0.3s ease;">
-        <div style="font-size: 50px; margin-bottom: 10px;">⚠️</div>
-        <h3 style="margin-top: 0; color: #dc3545; font-size: 20px;">WARNING / PERINGATAN!</h3>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-        <div style="color: #333; line-height: 1.6; font-size: 14px; text-align: left; background: #fff5f5; padding: 15px; border-left: 4px solid #dc3545; border-radius: 4px;">
-            Jika kamu mencoba membuka aplikasi lain, mencoba membuka tab baru, serta mencoba untuk membagi layar <strong>(split screen)</strong> sebanyak <strong>2 kali</strong>, maka sistem ini akan otomatis <strong>MEMBLOKIR</strong> akses untuk mengerjakan ujian!
-            <br><br>
-            Pastikan juga layar handphone disetting dengan durasi waktu tetap menyala, karena apabila layar mati akan dianggap melakukan pelanggaran.
-        </div>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <button onclick="mulaiUjianResmi()" style="width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 4px 10px rgba(40,167,69,0.3);">Saya Paham</button>
+    <button class="save-btn" onclick="simpanDataTeks()" id="btnSimpan">Simpan Data Baru</button>
+    <button class="cancel-btn" onclick="resetForm()" id="btnBatal">Batal / Reset Mode</button>
+
+    <h3>Data Konfigurasi Ujian Aktif</h3>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mata Pelajaran</th>
+                    <th>Durasi</th>
+                    <th>Token</th>
+                    <th>Form Link</th>
+                    <th>Background</th>
+                    <th>Aksi Kontrol</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="6">Memuat database cloud...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
-<!-- Animasi Masuk Ringan -->
-<style>
-@keyframes modalSwoosh {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-</style>
-    
-<!-- ================= SEGMEN SKRIP UTAMA PORTAL ================= -->
 <script>
+// URL Web App dari Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
-let VALID_TOKEN = "";
-let FORM_LINK = "";
-let DATA_LOADED = false;
+let base64Image = "";
+let editRow = null;
 
-// Variabel Kontrol Keamanan & Pelanggaran
-let ujianBerjalan = false;
-let batasPelanggaran = 3;
-let sedangMemulihkanFullscreen = false;
-
-// Variabel Baseline untuk Rekaman Dimensi Layar Aman
-let batasLebarMinimal = 0;
-let batasTinggiMinimal = 0;
-
-// Variabel Alur Validasi Modal Terbuka
-let linkFormUjianAktif = "";
-let tokenUjianAktif = "";
-
-// --- METHOD: SOUND ALERT ENGINE (WEB AUDIO API) ---
-function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.type = "sine";
-        oscillator.frequency.value = frekuensi;
-        
-        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durasi / 1000);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + durasi / 1000);
-    } catch (e) {
-        console.error("Gagal memicu osilator audio otomatis.", e);
-    }
-}
-
-function picuAlarmKecurangan() {
-    mainkanSuaraBip(250, 1100);
-    setTimeout(() => {
-        mainkanSuaraBip(450, 1300);
-    }, 300);
-}
-
-// --- METHOD: LOAD CONFIG UTAMA & CEK STATUS BLOKIR ---
-window.addEventListener("DOMContentLoaded", function () {
+// ================= AMBIL DATA UTAMA DARI SERVER =================
+async function loadData() {
+    const tableBody = document.getElementById("tableBody");
     
-    const cachedBg = localStorage.getItem("cached_background");
-    if (cachedBg) {
-        document.body.style.background = `url(${cachedBg}) no-repeat center center fixed`;
-        document.body.style.backgroundSize = "cover";
-    }
+    try {
+        const res = await fetch(`${API_URL}?action=all`);
+        const data = await res.json();
 
-    // Ambil parameter konfigurasi terbaru dari server
-    fetch(API_URL + "?action=latest")
-    .then(res => res.json())
-    .then(data => {
-        VALID_TOKEN = (data.token || "").toString().trim().replace(/\s+/g, "").toLowerCase();
-        FORM_LINK = data.formLink || "";
-
-        if (FORM_LINK) {
-            document.getElementById("gform-iframe").src = FORM_LINK;
-        }
-
-        if (data.background) {
-            if (cachedBg !== data.background) {
-                document.body.style.background = `url(${data.background}) no-repeat center center fixed`;
-                document.body.style.backgroundSize = "cover";
-            }
-            localStorage.setItem("cached_background", data.background);
-        }
-
-        DATA_LOADED = true;
-        
-        // Setelah config siap, jika siswa sudah login, langsung validasi status ke server
-        const nis = localStorage.getItem("nis");
-        if (nis) {
-            periksaStatusServer(nis);
-        }
-    })
-    .catch(err => {
-        console.error("Gagal sinkronisasi data:", err);
-        alert("Gagal mengambil data dari server! Periksa kembali jaringan internet.");
-    });
-
-    const nama = localStorage.getItem("nama");
-    const nis = localStorage.getItem("nis");
-    const kelas = localStorage.getItem("kelas");
-
-    if (nama && nis && kelas) {
-        tampilToken();
-    } else {
-        document.getElementById("identitas-box").style.display = "block";
-        document.getElementById("login-container").style.display = "none";
-    }
-});
-
-// --- METHOD: PERIKSA STATUS AKTIF/BLOKIR DARI GOOGLE SHEET ---
-function periksaStatusServer(nis) {
-    fetch(`${API_URL}?action=check_status&nis=${nis}`)
-    .then(res => res.json())
-    .then(res => {
-        const inputToken = document.getElementById("token-input");
-        const btnLogin = document.getElementById("btn-login-token"); 
-
-        if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
-            // Simpan status blokir secara lokal agar awet saat di-refresh
-            localStorage.setItem("is_blocked", "true");
-            
-            // Kunci komponen input token
-            if (inputToken) {
-                inputToken.disabled = true;
-                inputToken.value = "";
-                inputToken.placeholder = "AKSES DIKUNCI - HUBUNGI PENGAWAS";
-            }
-            if (btnLogin) btnLogin.disabled = true;
-            
-            alert("Akses Anda sedang dinonaktifkan/diblokir oleh pengawas. Silakan melapor.");
-        } else {
-            // Jika status di sheet adalah "Aktif", bersihkan status blokir lokal
-            localStorage.removeItem("is_blocked");
-            if (inputToken) {
-                inputToken.disabled = false;
-                inputToken.placeholder = "Masukkan Token Ujian";
-            }
-            if (btnLogin) btnLogin.disabled = false;
-        }
-    })
-    .catch(err => console.error("Gagal memeriksa status siswa:", err));
-}
-
-// --- METHOD: MANAGEMEN USER ---
-function simpanIdentitas() {
-    const nama = document.getElementById("nama").value.trim();
-    const nis = document.getElementById("nis").value.trim();
-    const kelas = document.getElementById("kelas").value.trim();
-
-    if (!nama || !nis || !kelas) {
-        alert("Lengkapi semua data!");
-        return;
-    }
-
-    localStorage.setItem("nama", nama);
-    localStorage.setItem("nis", nis);
-    localStorage.setItem("kelas", kelas);
-
-    tampilToken();
-    periksaStatusServer(nis); // Langsung cek status ke sheet setelah input identitas
-}
-
-function tampilToken() {
-    document.getElementById("identitas-box").style.display = "none";
-    document.getElementById("login-container").style.display = "block";
-
-    document.getElementById("info-siswa").innerHTML =
-        "<strong>Nama:</strong> " + localStorage.getItem("nama") + "<br>" +
-        "<strong>NIS:</strong> " + localStorage.getItem("nis") + "<br>" +
-        "<strong>Kelas:</strong> " + localStorage.getItem("kelas");
-        
-    // Cek apakah ada record blokir lokal sebelum melakukan pengecekan server
-    if (localStorage.getItem("is_blocked") === "true") {
-        const inputToken = document.getElementById("token-input");
-        if (inputToken) {
-            inputToken.disabled = true;
-            inputToken.placeholder = "AKSES DIKUNCI - HUBUNGI PENGAWAS";
-        }
-    }
-}
-
-// --- AMBIL CONFIG + LOGIN & INTEGRASI POPUP BERTINGKAT ---
-function verifikasiToken() {
-    if (!DATA_LOADED) {
-        alert("Data server belum siap, mohon tunggu beberapa detik...");
-        return;
-    }
-
-    if (localStorage.getItem("is_blocked") === "true") {
-        alert("Akses Anda terkunci. Silakan minta pengawas untuk mengaktifkan status Anda.");
-        return;
-    }
-
-    const nis = localStorage.getItem("nis");
-    const inputToken = document.getElementById("token-input").value
-        .toString().trim().replace(/\s+/g, "").toLowerCase();
-
-    if (!inputToken) {
-        alert("Token tidak boleh kosong!");
-        return;
-    }
-
-    // 1. Cek status aktif/blokir dulu
-    fetch(`${API_URL}?action=check_status&nis=${nis}`)
-    .then(res => res.json())
-    .then(res => {
-        if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
-            localStorage.setItem("is_blocked", "true");
-            tampilToken();
-            alert("Gagal masuk. Status Anda terdeteksi tidak aktif.");
+        if (data.error) {
+            tableBody.innerHTML = `<tr><td colspan="6" style="color:red;">Error: ${data.error}</td></tr>`;
             return;
         }
 
-        // 2. Jika status aktif, ambil config Form Link spesifik berdasarkan token yang diinput
-        fetch(`${API_URL}?action=latest&token=${inputToken}`)
-        .then(res => res.json())
-        .then(config => {
-            if (config.error) {
-                alert("Token Salah atau Tidak Ditemukan!");
-                return;
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6">Belum ada data konfigurasi ujian di server.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = "";
+        data.forEach(item => {
+            const bgDisplay = item.background 
+                ? `<a href="${item.background}" target="_blank"><img src="${item.background}" alt="BG"></a>` 
+                : `<span style="color:#999; font-style:italic;">Default</span>`;
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><strong>${item.mapel}</strong></td>
+                <td>${item.durasi}</td>
+                <td><code style="background:#eee; padding:2px 6px; border-radius:4px; font-weight:bold;">${item.token}</code></td>
+                <td style="font-size:11px; color:#555;">${item.formLink}</td>
+                <td>${bgDisplay}</td>
+                <td>
+                    <button class="action-btn edit" onclick="masukModeEdit(${item.row}, '${btoa(encodeURIComponent(item.mapel))}', '${btoa(encodeURIComponent(item.durasi))}', '${btoa(encodeURIComponent(item.token))}', '${btoa(encodeURIComponent(item.formLink))}')">Edit Teks</button>
+                    <button class="action-btn delete" onclick="hapusBarisTotal(${item.row})">Hapus</button>
+                    <hr style="border:0; border-top:1px dashed #ccc; margin:4px 0;">
+                    <button class="action-btn bg-upload" onclick="prosesUploadBgKhusus(${item.row})">Pasang BG</button>
+                    <button class="action-btn bg-delete" onclick="hapusBgKhusus(${item.row})">Kosongkan BG</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+    } catch (err) {
+        console.error(err);
+        tableBody.innerHTML = `<tr><td colspan="6" style="color:red;">Gagal memuat data. Periksa koneksi internet / izin Web App.</td></tr>`;
+    }
+}
+
+// ================= PREVIEW & AUTO COMPRESS GAMBAR (LOKAL) =================
+document.getElementById("bgFile").addEventListener("change", function(e){
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event){
+        const img = new Image();
+        img.onload = function() {
+            const MAX_WIDTH = 1280;
+            const MAX_HEIGHT = 1280;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
             }
 
-            // Simpan data lembar kerja sementara ke memori global
-            linkFormUjianAktif = config.formLink;
-            tokenUjianAktif = inputToken;
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
 
-            // Masukkan data teks mapel dan durasi ke dalam Popup Sesi 1
-            document.getElementById("modalMapel").innerText = config.mapel || "Mata Pelajaran";
-            document.getElementById("modalDurasi").innerText = config.durasi || "0";
+            base64Image = canvas.toDataURL("image/jpeg", 0.75); 
+            
+            document.getElementById("preview").style.backgroundImage = `url(${base64Image})`;
+            console.log("Gambar berhasil dikompresi untuk kestabilan upload.");
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+});
 
-            // Munculkan kontainer overlay popup melayang (Sesi 1 Aktif)
-            document.getElementById("quizModalOverlay").style.style.setProperty("display", "flex", "important");
-            document.getElementById("popupSesi1").style.display = "block";
-            document.getElementById("popupSesi2").style.display = "none";
-        })
-        .catch(err => alert("Gagal memvalidasi token ke server."));
-    });
-}
+// ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
+async function simpanDataTeks() {
+    const formLink = document.getElementById("formLink").value.trim();
+    const token = document.getElementById("token").value.trim();
+    const mapel = document.getElementById("mapel").value.trim();
+    const durasi = document.getElementById("durasi").value.trim();
 
-// ================= FUNGSI KONTROL POPUP MODAL BERTINGKAT =================
-
-// TOMBOL: BATAL (Sesi 1)
-function batalUjian() {
-    document.getElementById("quizModalOverlay").style.setProperty("display", "none", "important");
-    document.getElementById("token-input").value = "";
-    
-    linkFormUjianAktif = "";
-    tokenUjianAktif = "";
-    console.log("Siswa membatalkan masuk ujian. Kembali ke menu token.");
-}
-
-// TOMBOL: LANJUTKAN (Sesi 1 ke Sesi 2)
-function lanjutKeSesi2() {
-    document.getElementById("popupSesi1").style.display = "none";
-    document.getElementById("popupSesi2").style.display = "block";
-}
-
-// TOMBOL: SAYA PAHAM (Sesi 2 Resmi Mulai Masuk Ujian)
-function mulaiUjianResmi() {
-    if (!linkFormUjianAktif) {
-        alert("Tautan soal bermasalah, silakan ulangi proses input token.");
-        batalUjian();
+    if (!formLink || !token || !mapel || !durasi) {
+        alert("Mohon lengkapi semua bidang data teks terlebih dahulu!");
         return;
     }
 
-    // 1. Tutup seluruh rentetan popup melayang
-    document.getElementById("quizModalOverlay").style.setProperty("display", "none", "important");
+    const btnSimpan = document.getElementById("btnSimpan");
+    btnSimpan.disabled = true;
+    btnSimpan.innerText = "Memproses...";
 
-    // 2. Terapkan link Google Form ke iFrame utama
-    document.getElementById("gform-iframe").src = linkFormUjianAktif;
-
-    // 3. Kirim data kehadiran (presensi) siswa ke Sheet2
-    kirimDataSiswa(tokenUjianAktif);
-
-    // 4. Tukar layar utama login ke lembar kerja ujian (Exam Box)
-    document.getElementById("login-container").style.display = "none";
-    document.getElementById("exam-popup").style.display = "block";
-
-    // 5. Kalkulasi batas aman dimensi resolusi layar untuk deteksi Split Screen
-    const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
-    const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
-    batasLebarMinimal = lebarAsli * 0.85;
-    batasTinggiMinimal = tinggiAsli * 0.85;
-
-    // 6. Jalankan Engine Proteksi Anti-Curang & Eksekusi Mode Fullscreen
-    ujianBerjalan = true;
-    masukFullscreen();
-}
-
-function kirimDataSiswa(token) {
     const formData = new URLSearchParams();
-    formData.append("action", "add_siswa");
-    formData.append("nama", localStorage.getItem("nama"));
-    formData.append("nis", localStorage.getItem("nis"));
-    formData.append("kelas", localStorage.getItem("kelas"));
+    formData.append("action", editRow ? "update_text" : "add");
+    formData.append("formLink", formLink);
     formData.append("token", token);
-
-    fetch(API_URL, { method: "POST", body: formData })
-    .then(res => res.text())
-    .then(res => console.log("Log Absen Sukses:", res))
-    .catch(err => console.error(err));
-}
-
-// --- METHOD: VIEW INTERACTION ---
-function masukFullscreen() {
-    let elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => console.log(err));
-    } else if (elem.webkitRequestFullscreen) { 
-        elem.webkitRequestFullscreen();
+    formData.append("mapel", mapel);
+    formData.append("durasi", durasi);
+    
+    if (editRow) {
+        formData.append("row", editRow);
     }
-}
 
-// --- SYSTEM LOGIC: ANTI-CURANG TINGKAT TINGGI ---
+    try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const result = await res.text();
 
-// 1. Monitor Perpindahan Fokus / Aplikasi / Minimize Tab
-document.addEventListener("visibilitychange", function() {
-    if (document.hidden && ujianBerjalan) {
-        catatPelanggaran("Terdeteksi meminimalkan halaman, membuka aplikasi lain, atau berpindah tab!");
-    }
-});
-
-// 2. Monitor Paksa Keluar Mode Layar Penuh (Fullscreen)
-function checkFullscreenExit() {
-    if (sedangMemulihkanFullscreen) return;
-    if (!document.fullscreenElement && !document.webkitFullscreenElement && ujianBerjalan) {
-        catatPelanggaran("Terdeteksi keluar dari mode layar penuh (Fullscreen)!");
-    }
-}
-document.addEventListener('fullscreenchange', checkFullscreenExit);
-document.addEventListener('webkitfullscreenchange', checkFullscreenExit);
-
-// 3. SENSOR ANTI SPLIT SCREEN
-window.addEventListener('resize', function() {
-    if (!ujianBerjalan || sedangMemulihkanFullscreen) return;
-
-    let lebarSekarang = window.innerWidth || document.documentElement.clientWidth;
-    let tinggiSekarang = window.innerHeight || document.documentElement.clientHeight;
-
-    if (lebarSekarang < batasLebarMinimal || tinggiSekarang < batasTinggiMinimal) {
-        catatPelanggaran("Terdeteksi pembagian layar (Split Screen) atau pengecilan area kerja browser!");
-    }
-});
-
-// 4. SENSOR ANTI DUAL MONITOR & FLOATING APPS
-window.addEventListener('blur', function() {
-    if (!ujianBerjalan) return;
-
-    setTimeout(() => {
-        if (document.activeElement !== document.getElementById("gform-iframe")) {
-            catatPelanggaran("Fokus layar hilang! Dilarang berinteraksi dengan layar kedua atau jendela aplikasi lain.");
+        if (result.includes("SUCCESS")) {
+            alert(editRow ? "Data teks berhasil diperbarui!" : "Konfigurasi ujian baru berhasil ditambahkan!");
+            resetForm();
+            loadData();
+        } else {
+            alert("Respon Server: " + result);
         }
-    }, 400);
-});
-
-// 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan + Bunyi Alarm
-function catatPelanggaran(alasan) {
-    if (!ujianBerjalan) return;
-    
-    batasPelanggaran--;
-    picuAlarmKecurangan();
-    
-    if (batasPelanggaran > 0) {
-        document.getElementById('modal-message').innerText = alasan;
-        document.getElementById('modal-chance').innerText = batasPelanggaran;
-        document.getElementById('custom-modal').style.display = 'flex';
-    } else {
-        portalTerkunci();
+    } catch (err) {
+        console.error(err);
+        alert("Terjadi gangguan jaringan saat menyimpan data.");
+    } finally {
+        btnSimpan.disabled = false;
     }
 }
 
-function tutupModalPeringatan() {
-    document.getElementById('custom-modal').style.display = 'none';
-    sedangMemulihkanFullscreen = true; 
-    masukFullscreen();
+// ================= MASUK MODE EDIT TEKS DATA =================
+function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
+    editRow = row;
     
-    setTimeout(() => { 
-        const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
-        const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
-        batasLebarMinimal = lebarAsli * 0.85;
-        batasTinggiMinimal = tinggiAsli * 0.85;
-        sedangMemulihkanFullscreen = false; 
-    }, 600);
+    document.getElementById("mapel").value = decodeURIComponent(atob(mapelB64));
+    document.getElementById("durasi").value = decodeURIComponent(atob(durasiB64));
+    document.getElementById("token").value = decodeURIComponent(atob(tokenB64));
+    document.getElementById("formLink").value = decodeURIComponent(atob(formLinkB64));
+
+    const btnSimpan = document.getElementById("btnSimpan");
+    btnSimpan.innerText = "Update Teks Data (Baris " + row + ")";
+    btnSimpan.style.background = "#ffc107";
+    btnSimpan.style.color = "black";
+    
+    document.getElementById("btnBatal").style.display = "block";
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 6. Eksekusi Sanksi Penguncian & Kirim Sinyal Blokir Ke Server GAS
-function portalTerkunci() {
-    ujianBerjalan = false;
-    window.onbeforeunload = null; 
-    
-    mainkanSuaraBip(1200, 1500);
-    
-    // Set flag terblokir permanen di browser lokal siswa
-    localStorage.setItem("is_blocked", "true");
+// ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
+async function prosesUploadBgKhusus(row) {
+    if (!base64Image) {
+        alert("Pilih file gambar baru terlebih dahulu pada kotak penjelajah file di atas!");
+        return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menimpa/mengisi background pada baris ${row}?`)) return;
+
+    const btnSimpan = document.getElementById("btnSimpan");
+    const labelSblm = btnSimpan.innerText;
+    btnSimpan.disabled = true;
+    btnSimpan.innerText = "Mengunggah Gambar...";
+
+    // Menggunakan URLSearchParams agar kompatibel penuh dengan pembacaan e.parameter di Apps Script
+    const formData = new URLSearchParams();
+    formData.append("action", "upload_bg");
+    formData.append("row", row);
+    formData.append("image", base64Image); 
+
+    try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const result = await res.text();
+
+        if (result.includes("SUCCESS")) {
+            alert(`Sukses mengunggah background baru untuk data baris ${row}!`);
+            document.getElementById("bgFile").value = "";
+            base64Image = "";
+            document.getElementById("preview").style.backgroundImage = "";
+            loadData();
+        } else {
+            alert("Gagal upload. Respon Server: " + result);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Terjadi kesalahan jaringan saat mentransfer data gambar.");
+    } finally {
+        btnSimpan.disabled = false;
+        btnSimpan.innerText = labelSblm;
+    }
+}
+
+// ================= KOSONGKAN BACKGROUND BARIS DATA =================
+async function hapusBgKhusus(row) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus file background pada baris ${row} dan mengembalikannya ke default?`)) return;
 
     const formData = new URLSearchParams();
-    formData.append("action", "blokir_siswa");
-    formData.append("nis", localStorage.getItem("nis"));
-    formData.append("nama", localStorage.getItem("nama"));
-    formData.append("alasan", "Kecurangan Layar Ganda / Split-Screen / Kehilangan Fokus Berulang");
+    formData.append("action", "delete_bg");
+    formData.append("row", row);
 
-    fetch(API_URL, { method: "POST", body: formData })
-    .then(() => {
-        // Balikkan halaman ke tampilan input token yang sekarang sudah terkunci
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {});
+    try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const result = await res.text();
+        
+        if (result.includes("SUCCESS")) {
+            alert("Background berhasil dikembalikan ke default!");
+            loadData();
+        } else {
+            alert("Gagal: " + result);
         }
-        document.getElementById('exam-popup').innerHTML = '';
-        document.getElementById('exam-popup').style.display = 'none';
-        
-        // Reset input token dan bekukan kolomnya
-        tampilToken();
-        alert("Akses Anda telah diblokir secara permanen! Halaman dikembalikan ke menu awal.");
-    })
-    .catch(err => console.error("Gagal kirim log blokir:", err));
-}
-
-// --- METHOD: SELESAI MANUAL ---
-function konfirmasiSelesai() {
-    const yakin = confirm("Apakah Anda yakin sudah menyelesaikan seluruh lembar ujian?");
-    if (yakin) {
-        akhiriUjian();
+    } catch (err) {
+        console.error(err);
+        alert("Gagal terhubung dengan server cloud.");
     }
 }
 
-function akhiriUjian() {
-    ujianBerjalan = false;
-    window.onbeforeunload = null;
+// ================= TOTAL HAPUS BARIS DATA =================
+async function hapusBarisTotal(row) {
+    if (!confirm(`PERINGATAN: Menghapus baris data ${row} secara total? File gambar terikat juga akan dibersihkan otomatis.`)) return;
 
-    if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-    }
-
-    // Set flag status tidak aktif/terkunci di lokal agar tidak bisa masuk lagi tanpa reset pengawas
-    localStorage.setItem("is_blocked", "true");
-
-    // Kirim sinyal ke server GAS untuk mengubah status menjadi 'Tidak Aktif' dan mengisi catatan
     const formData = new URLSearchParams();
-    formData.append("action", "blokir_siswa"); // Memanfaatkan engine action yang sama untuk mengubah status di Sheet
-    formData.append("nis", localStorage.getItem("nis"));
-    formData.append("nama", localStorage.getItem("nama"));
-    formData.append("alasan", "Telah menyelesaikan ujian");
+    formData.append("action", "delete");
+    formData.append("row", row);
 
-    fetch(API_URL, { method: "POST", body: formData })
-    .then(() => {
-        document.getElementById('exam-popup').innerHTML = '';
-        document.getElementById('exam-popup').style.display = 'none';
-
-        document.getElementById('login-container').innerHTML = `
-            <h2 style="color: green; margin-top: 20px;">UJIAN SELESAI</h2>
-            <p style="color: #333;">Terima kasih, data ujian Anda telah disimpan.</p>
-            <p>Silakan menutup halaman ini dengan tenang.</p>
-        `;
-        document.getElementById('login-container').style.display = 'block';
-    })
-    .catch(err => {
-        console.error("Gagal mengirim status selesai ke server:", err);
-        // Tetap tampilkan halaman selesai meskipun log server gagal agar siswa tidak panik
-        document.getElementById('exam-popup').innerHTML = '';
-        document.getElementById('exam-popup').style.display = 'none';
+    try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const result = await res.text();
         
-        document.getElementById('login-container').innerHTML = `
-            <h2 style="color: green; margin-top: 20px;">UJIAN SELESAI</h2>
-            <p style="color: #333;">Data lokal disimpan, namun gagal sinkronisasi ke server. Hubungi pengawas untuk verifikasi.</p>
-        `;
-        document.getElementById('login-container').style.display = 'block';
-    });
+        if (result.includes("SUCCESS")) {
+            alert("Seluruh data baris berhasil dimusnahkan!");
+            if(editRow === row) resetForm();
+            loadData();
+        } else {
+            alert("Gagal: " + result);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Gagal berkomunikasi dengan server.");
+    }
 }
 
-// --- SECURITY SHORTCUT KEY & MOUSE BLOKER ---
-document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && ['c','v','u','s','p'].includes(e.key.toLowerCase())) {
-        e.preventDefault();
-    }
-    if (e.key === 'F12') e.preventDefault();
-});
+// ================= RESET / BERSIHKAN FORM INTERFACE =================
+function resetForm() {
+    document.getElementById("formLink").value = "";
+    document.getElementById("token").value = "";
+    document.getElementById("mapel").value = "";
+    document.getElementById("durasi").value = "";
+    document.getElementById("preview").style.backgroundImage = "";
+    document.getElementById("bgFile").value = "";
+    
+    const btnSimpan = document.getElementById("btnSimpan");
+    btnSimpan.innerText = "Simpan Data Baru";
+    btnSimpan.style.background = "#007bff";
+    btnSimpan.style.color = "white";
+    document.getElementById("btnBatal").style.display = "none";
+    
+    base64Image = "";
+    editRow = null;
+}
 
-document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-});
-
-window.onbeforeunload = function() {
-    if (ujianBerjalan) {
-        return "Ujian sedang berlangsung! Riwayat pengerjaan Anda berisiko hilang.";
-    }
-};
+// Jalankan otomatis saat halaman dirender admin
+loadData();
 </script>
+
 </body>
 </html>
