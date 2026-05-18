@@ -221,6 +221,10 @@ let sedangMemulihkanFullscreen = false;
 let batasLebarMinimal = 0;
 let batasTinggiMinimal = 0;
 
+// Variabel Alur Validasi Modal Terbuka
+let linkFormUjianAktif = "";
+let tokenUjianAktif = "";
+
 // --- METHOD: SOUND ALERT ENGINE (WEB AUDIO API) ---
 function mainkanSuaraBip(durasi = 400, frekuensi = 1000) {
     try {
@@ -376,6 +380,7 @@ function tampilToken() {
     }
 }
 
+// --- AMBIL CONFIG + LOGIN & INTEGRASI POPUP BERTINGKAT ---
 function verifikasiToken() {
     if (!DATA_LOADED) {
         alert("Data server belum siap, mohon tunggu beberapa detik...");
@@ -416,26 +421,71 @@ function verifikasiToken() {
                 return;
             }
 
-            // Pasang link Google Form yang sesuai dengan token tersebut ke iFrame
-            document.getElementById("gform-iframe").src = config.formLink;
-            
-            // Kirim data presensi siswa ke Sheet2
-            kirimDataSiswa(inputToken);
+            // Simpan data lembar kerja sementara ke memori global
+            linkFormUjianAktif = config.formLink;
+            tokenUjianAktif = inputToken;
 
-            // Jalankan ujian dan masuk Fullscreen
-            document.getElementById("login-container").style.display = "none";
-            document.getElementById("exam-popup").style.display = "block";
+            // Masukkan data teks mapel dan durasi ke dalam Popup Sesi 1
+            document.getElementById("modalMapel").innerText = config.mapel || "Mata Pelajaran";
+            document.getElementById("modalDurasi").innerText = config.durasi || "0";
 
-            const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
-            const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
-            batasLebarMinimal = lebarAsli * 0.85;
-            batasTinggiMinimal = tinggiAsli * 0.85;
-
-            ujianBerjalan = true;
-            masukFullscreen();
+            // Munculkan kontainer overlay popup melayang (Sesi 1 Aktif)
+            document.getElementById("quizModalOverlay").style.style.setProperty("display", "flex", "important");
+            document.getElementById("popupSesi1").style.display = "block";
+            document.getElementById("popupSesi2").style.display = "none";
         })
         .catch(err => alert("Gagal memvalidasi token ke server."));
     });
+}
+
+// ================= FUNGSI KONTROL POPUP MODAL BERTINGKAT =================
+
+// TOMBOL: BATAL (Sesi 1)
+function batalUjian() {
+    document.getElementById("quizModalOverlay").style.setProperty("display", "none", "important");
+    document.getElementById("token-input").value = "";
+    
+    linkFormUjianAktif = "";
+    tokenUjianAktif = "";
+    console.log("Siswa membatalkan masuk ujian. Kembali ke menu token.");
+}
+
+// TOMBOL: LANJUTKAN (Sesi 1 ke Sesi 2)
+function lanjutKeSesi2() {
+    document.getElementById("popupSesi1").style.display = "none";
+    document.getElementById("popupSesi2").style.display = "block";
+}
+
+// TOMBOL: SAYA PAHAM (Sesi 2 Resmi Mulai Masuk Ujian)
+function mulaiUjianResmi() {
+    if (!linkFormUjianAktif) {
+        alert("Tautan soal bermasalah, silakan ulangi proses input token.");
+        batalUjian();
+        return;
+    }
+
+    // 1. Tutup seluruh rentetan popup melayang
+    document.getElementById("quizModalOverlay").style.setProperty("display", "none", "important");
+
+    // 2. Terapkan link Google Form ke iFrame utama
+    document.getElementById("gform-iframe").src = linkFormUjianAktif;
+
+    // 3. Kirim data kehadiran (presensi) siswa ke Sheet2
+    kirimDataSiswa(tokenUjianAktif);
+
+    // 4. Tukar layar utama login ke lembar kerja ujian (Exam Box)
+    document.getElementById("login-container").style.display = "none";
+    document.getElementById("exam-popup").style.display = "block";
+
+    // 5. Kalkulasi batas aman dimensi resolusi layar untuk deteksi Split Screen
+    const lebarAsli = window.innerWidth || document.documentElement.clientWidth;
+    const tinggiAsli = window.innerHeight || document.documentElement.clientHeight;
+    batasLebarMinimal = lebarAsli * 0.85;
+    batasTinggiMinimal = tinggiAsli * 0.85;
+
+    // 6. Jalankan Engine Proteksi Anti-Curang & Eksekusi Mode Fullscreen
+    ujianBerjalan = true;
+    masukFullscreen();
 }
 
 function kirimDataSiswa(token) {
