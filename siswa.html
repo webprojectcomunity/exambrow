@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard Monitoring Siswa</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 p-6">
+<div class="max-w-7xl mx-auto">
+<h1 class="text-2xl font-bold mb-4">Dashboard Monitoring Siswa</h1>
+
+<div class="bg-white p-4 rounded shadow mb-4 flex gap-2">
+<input id="cari" class="border p-2 rounded flex-1" placeholder="Cari nama / NIS">
+<select id="status" class="border p-2 rounded">
+<option value="">Semua</option>
+<option>Aktif</option>
+<option>Tidak Aktif</option>
+</select>
+<button onclick="muatDataSiswa()" class="bg-blue-600 text-white px-4 rounded">Refresh</button>
+</div>
+
+<div class="bg-white rounded shadow overflow-auto">
+<table class="w-full">
+<thead class="bg-slate-800 text-white">
+<tr>
+<th class="p-2">Nama</th>
+<th>NIS</th>
+<th>Kelas</th>
+<th>Status</th>
+<th>Catatan</th>
+<th>Sisa Waktu</th>
+<th>Aksi</th>
+</tr>
+</thead>
+<tbody id="tabel"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+// ======================================
+// KONFIGURASI API
+// ======================================
+const WEB_APP_URL =
+"https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
+
+let databaseSiswa = [];
+
+
+// ======================================
+// LOAD DATA SISWA REALTIME
+// ======================================
+async function muatDataSiswa() {
+
+    const tbody = document.getElementById("tabel");
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center p-4">
+                Memuat data...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${WEB_APP_URL}?action=all_siswa`
+            );
+
+        const data =
+            await response.json();
+
+        console.log("Response API:", data);
+
+        // jika API error
+        if (data.error) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7"
+                        class="text-center text-red-500 p-4">
+                        ${data.error}
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        databaseSiswa = data;
+
+        render(databaseSiswa);
+
+    } catch (err) {
+
+        console.error(err);
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7"
+                    class="text-center text-red-500 p-4">
+                    Gagal menghubungi server
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+// ======================================
+// RENDER TABEL
+// ======================================
+function render(data) {
+
+    const tbody =
+        document.getElementById("tabel");
+
+    tbody.innerHTML = "";
+
+    if (!data || data.length === 0) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7"
+                    class="text-center p-4">
+                    Data siswa kosong
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    data.forEach((siswa) => {
+
+        const statusBadge =
+            siswa.status === "Aktif"
+            ? `<span class="bg-green-100 text-green-700 px-2 py-1 rounded">Aktif</span>`
+            : `<span class="bg-red-100 text-red-700 px-2 py-1 rounded">Tidak Aktif</span>`;
+
+        tbody.innerHTML += `
+        <tr class="border-b hover:bg-slate-50">
+
+            <td class="p-2">
+                ${siswa.nama || "-"}
+            </td>
+
+            <td class="p-2">
+                ${siswa.nis || "-"}
+            </td>
+
+            <td class="p-2">
+                ${siswa.kelas || "-"}
+            </td>
+
+            <td class="p-2">
+                ${statusBadge}
+            </td>
+
+            <td class="p-2">
+                ${siswa.catatan || "-"}
+            </td>
+
+            <td class="p-2">
+                ${siswa.sisa_waktu || "-"}
+            </td>
+
+            <td class="p-2">
+
+                <div class="flex gap-1">
+
+                    <button
+                        onclick="editSiswa(${siswa.row})"
+                        class="bg-blue-500 text-white px-2 py-1 rounded">
+                        ✏️
+                    </button>
+
+                    <button
+                        onclick="hapusSiswa(${siswa.row})"
+                        class="bg-red-500 text-white px-2 py-1 rounded">
+                        🗑️
+                    </button>
+
+                    <button
+                        onclick="blokir('${siswa.nama}','${siswa.nis}')"
+                        class="bg-orange-500 text-white px-2 py-1 rounded">
+                        🔒
+                    </button>
+
+                    <button
+                        onclick="unlock('${siswa.nis}')"
+                        class="bg-green-500 text-white px-2 py-1 rounded">
+                        🔓
+                    </button>
+
+                </div>
+
+            </td>
+
+        </tr>
+        `;
+    });
+}
+
+
+// ======================================
+// EDIT SISWA
+// ======================================
+async function editSiswa(row) {
+
+    const nama =
+        prompt("Nama baru");
+
+    if (!nama) return;
+
+    const fd =
+        new FormData();
+
+    fd.append(
+        "action",
+        "edit_siswa"
+    );
+
+    fd.append(
+        "row",
+        row
+    );
+
+    fd.append(
+        "nama",
+        nama
+    );
+
+    const res =
+        await fetch(
+            WEB_APP_URL,
+            {
+                method: "POST",
+                body: fd
+            }
+        );
+
+    alert(await res.text());
+
+    muatDataSiswa();
+}
+
+
+// ======================================
+// HAPUS SISWA
+// ======================================
+async function hapusSiswa(row) {
+
+    if (!confirm("Hapus data siswa?"))
+        return;
+
+    const fd =
+        new FormData();
+
+    fd.append(
+        "action",
+        "delete_siswa"
+    );
+
+    fd.append(
+        "row",
+        row
+    );
+
+    const res =
+        await fetch(
+            WEB_APP_URL,
+            {
+                method: "POST",
+                body: fd
+            }
+        );
+
+    alert(await res.text());
+
+    muatDataSiswa();
+}
+
+
+// ======================================
+// BLOKIR SISWA
+// ======================================
+async function blokir(
+    nama,
+    nis
+) {
+
+    const fd =
+        new FormData();
+
+    fd.append(
+        "action",
+        "blokir_siswa"
+    );
+
+    fd.append(
+        "nama",
+        nama
+    );
+
+    fd.append(
+        "nis",
+        nis
+    );
+
+    fd.append(
+        "alasan",
+        "Blokir oleh Admin"
+    );
+
+    const res =
+        await fetch(
+            WEB_APP_URL,
+            {
+                method: "POST",
+                body: fd
+            }
+        );
+
+    alert(await res.text());
+
+    muatDataSiswa();
+}
+
+
+// ======================================
+// UNLOCK SISWA
+// ======================================
+async function unlock(
+    nis
+) {
+
+    const fd =
+        new FormData();
+
+    fd.append(
+        "action",
+        "unlock_siswa"
+    );
+
+    fd.append(
+        "nis",
+        nis
+    );
+
+    const res =
+        await fetch(
+            WEB_APP_URL,
+            {
+                method: "POST",
+                body: fd
+            }
+        );
+
+    alert(await res.text());
+
+    muatDataSiswa();
+}
+
+
+// ======================================
+// AUTO LOAD
+// ======================================
+window.onload = () => {
+    muatDataSiswa();
+};
+</script>
+</body>
+</html>
