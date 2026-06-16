@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Pengaturan</title>
+    <!-- Menggunakan CDN Tailwind CSS resmi -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR -->
+        <div class="w-64 bg-slate-800 text-white flex flex-col hidden md:flex">
+            <!-- Logo / Judul -->
+            <div class="h-16 flex items-center justify-center border-b border-slate-700 px-6">
+                <span class="text-lg font-bold tracking-wider uppercase flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-indigo-400"></i> ExamControl
+                </span>
+            </div>
+            
+            <!-- Menu Navigasi -->
+            <div class="flex-1 overflow-y-auto py-4">
+                <nav class="px-4 space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors">
+                        <i class="fa-solid fa-gauge w-5 text-center"></i>
+                        Dashboard
+                    </a>
+                    
+                    <a href="https://webprojectcomunity.github.io/exambrow/Admin.html" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                        <i class="fa-solid fa-file-signature w-5 text-center"></i>
+                        Pengaturan Ujian
+                    </a>
+                    
+                    <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white opacity-60 cursor-not-allowed transition-colors" title="Link menyusul">
+                        <i class="fa-solid fa-users w-5 text-center"></i>
+                        Pengaturan Siswa
+                        <span class="ml-auto text-xs bg-slate-600 px-2 py-0.5 rounded text-slate-400">Soon</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- Footer Sidebar -->
+            <div class="p-4 border-t border-slate-700 text-center text-xs text-slate-400">
+                &copy; 2026 Admin Panel
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 flex flex-col overflow-y-auto">
+            
+            <!-- TOPBAR / HEADER -->
+            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10">
+                <div class="flex items-center gap-4">
+                    <button class="text-slate-600 md:hidden block focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-xl font-semibold text-slate-800">Dashboard Utama</h1>
+                </div>
+                
+                <!-- Profil Pengguna Singkat -->
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-medium text-slate-700">Administrator</p>
+                        <p class="text-xs text-emerald-500 flex items-center gap-1 justify-end">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span> Online
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold shadow-inner">
+                        A
+                    </div>
+                </div>
+            </header>
+
+            <!-- KONTEN UTAMA -->
+            <main class="p-6 max-w-7xl w-full mx-auto space-y-6">
+                
+                <!-- Ringkasan Status / Statistik Singkat -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Status Kartu Ujian -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Modul Ujian</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">Sistem Exambrow</h3>
+                            <p class="text-xs text-slate-400 mt-2">Terintegrasi dengan sistem eksternal</p>
+                        </div>
+                        <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-xl">
+                            <i class="fa-solid fa-laptop-code"></i>
+                        </div>
+                    </div>
+
+                    <!-- Status Kartu Siswa -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Database Siswa</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">Belum Terhubung</h3>
+                            <p class="text-xs text-amber-500 mt-2"><i class="fa-solid fa-clock"></i> Menunggu tautan konfigurasi</p>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 text-xl">
+                            <i class="fa-solid fa-user-slash"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEKSI PENGATURAN UTAMA -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100">
+                        <h2 class="text-lg font-bold text-slate-800">Pusat Kendali & Konfigurasi</h2>
+                        <p class="text-sm text-slate-500">Silakan pilih menu pengaturan di bawah ini untuk mengelola jalannya ujian dan data siswa.</p>
+                    </div>
+                    
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Box Menu 1: Pengaturan Ujian -->
+                        <div class="border border-slate-200 rounded-xl p-5 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg text-lg">
+                                        <i class="fa-solid fa-sliders"></i>
+                                    </span>
+                                    <h3 class="font-semibold text-slate-800 text-base">1. Pengaturan Ujian</h3>
+                                </div>
+                                <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                    Kelola parameter ujian, token, durasi, proteksi kecurangan, dan sinkronisasi lembar soal secara terpusat melalui aplikasi Exambrow.
+                                </p>
+                            </div>
+                            <div>
+                                <a href="https://webprojectcomunity.github.io/exambrow/Admin.html" target="_blank" class="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-4 rounded-lg shadow-sm shadow-indigo-100 transition-colors">
+                                    Buka Pengaturan Ujian <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Box Menu 2: Pengaturan Siswa -->
+                        <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50 flex flex-col justify-between relative overflow-hidden">
+                            <!-- Label Penanda Belum Siap -->
+                            <div class="absolute top-3 right-3 bg-amber-100 text-amber-800 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded">
+                                Menunggu Link
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="p-2.5 bg-slate-200 text-slate-500 rounded-lg text-lg">
+                                        <i class="fa-solid fa-user-gear"></i>
+                                    </span>
+                                    <h3 class="font-semibold text-slate-400 text-base">2. Pengaturan Siswa</h3>
+                                </div>
+                                <p class="text-sm text-slate-400 leading-relaxed mb-4">
+                                    Menu untuk manajemen data peserta ujian, pembuatan akun siswa, pembagian kelas, cetak kartu ujian, dan status kehadiran.
+                                </p>
+                            </div>
+                            <div>
+                                <button disabled class="w-full inline-flex items-center justify-center gap-2 bg-slate-300 text-slate-500 text-sm font-medium py-2.5 px-4 rounded-lg cursor-not-allowed">
+                                    <i class="fa-solid fa-lock text-xs"></i> Fitur Dinonaktifkan
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+</body>
+</html>
