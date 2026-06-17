@@ -236,6 +236,7 @@ let editRow = null;
 // ================= AMBIL DATA UTAMA DARI SERVER =================
 async function loadData() {
     const tableBody = document.getElementById("tableBody");
+    if (!tableBody) return;
     
     try {
         const res = await fetch(`${API_URL}?action=all`);
@@ -254,7 +255,7 @@ async function loadData() {
         tableBody.innerHTML = "";
         data.forEach(item => {
             const bgDisplay = item.background 
-                ? `<a href="${item.background}" target="_blank"><img src="${item.background}" alt="BG"></a>` 
+                ? `<a href="${item.background}" target="_blank"><img src="${item.background}" alt="BG" style="max-width:50px; max-height:50px; border-radius:4px;"></a>` 
                 : `<span style="color:#999; font-style:italic;">Default</span>`;
 
             const tr = document.createElement("tr");
@@ -366,6 +367,7 @@ async function simpanDataTeks() {
         alert("Terjadi gangguan jaringan saat menyimpan data.");
     } finally {
         btnSimpan.disabled = false;
+        btnSimpan.innerText = editRow ? "Update Teks Data" : "Simpan Data Baru";
     }
 }
 
@@ -388,67 +390,104 @@ function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
 }
 
 // ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
-// ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 async function prosesUploadBgKhusus(row) {
-
-    // 🔥 VALIDASI AWAL
-    if (!base64Image) {
-        alert("Pilih file gambar terlebih dahulu!");
-        return;
-    }
-
-    // 🔥 DEBUG (INI PENTING)
-    console.log("DEBUG IMAGE SIZE:", base64Image?.length);
-    console.log("DEBUG IMAGE PREVIEW:", base64Image?.substring(0, 80));
-
-    if (!confirm(`Apakah Anda yakin ingin upload background baris ${row}?`)) return;
-
-    const btnSimpan = document.getElementById("btnSimpan");
-    const labelSblm = btnSimpan.innerText;
-
-    btnSimpan.disabled = true;
-    btnSimpan.innerText = "Mengunggah Gambar...";
-
-    const payload = {
-        action: "upload_bg",
-        row: row,
-        image: base64Image
-    };
-
     try {
+        // Validasi awal
+        if (!row || isNaN(row)) {
+            alert("Row tidak valid!");
+            return;
+        }
+
+        if (!base64Image || typeof base64Image !== "string") {
+            alert("Pilih file gambar terlebih dahulu melalui input file!");
+            return;
+        }
+
+        const sizeKB = Math.round((base64Image.length * 3) / 4 / 1024);
+        if (sizeKB > 2048) {
+            alert("Ukuran gambar terlalu besar! Maksimal 2MB.");
+            return;
+        }
+
+        if (!confirm(`Apakah Anda yakin ingin upload background ke baris ${row}?`)) {
+            return;
+        }
+
+        // Ambil elemen tombol simpan untuk UI Loading
+        const btnSimpan = document.getElementById("btnSimpan");
+        const originalText = btnSimpan ? btnSimpan.innerText : "Simpan Data Baru";
+        
+        if (btnSimpan) {
+            btnSimpan.disabled = true;
+            btnSimpan.innerText = "Mengunggah Gambar...";
+        }
+
+        // Setup Mekanisme Timeout (60 Detik) & AbortController agar tidak drop tanpa kejelasan
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
+        const formData = new URLSearchParams();
+        formData.append("action", "upload_bg");
+        formData.append("row", row);
+        formData.append("image", base64Image);
+
         const res = await fetch(API_URL, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/x-www-form-urlencoded"
             },
-            body: JSON.stringify(payload)
+            body: formData.toString(),
+            signal: controller.signal // Hubungkan sinyal di sini
         });
 
-        const result = await res.text();
+        clearTimeout(timeout); // 🔥 Sekarang aman karena variabel 'timeout' sudah dideklarasikan di atas
 
-        if (result.includes("SUCCESS")) {
+        const textResult = await res.text();
+        console.log("SERVER RESPONSE:", textResult);
 
-            alert(`Sukses upload background baris ${row}!`);
+        if (!res.ok) {
+            throw new Error(textResult || "Server error");
+        }
 
-            // reset
+        if (textResult.includes("SUCCESS")) {
+            alert(`Sukses mengunggah background untuk baris ${row}!`);
+            
+            // Bersihkan form upload gambar saja
             base64Image = "";
-            document.getElementById("bgFile").value = "";
-            document.getElementById("preview").style.backgroundImage = "";
+            const fileInput = document.getElementById("bgFile");
+            if (fileInput) fileInput.value = "";
+            const preview = document.getElementById("preview");
+            if (preview) preview.style.backgroundImage = "";
 
             loadData();
-
         } else {
-            alert("Gagal upload: " + result);
+            alert("Gagal upload. Respon server: " + textResult);
+        }
+
+        // Kembalikan UI Tombol
+        if (btnSimpan) {
+            btnSimpan.disabled = false;
+            btnSimpan.innerText = originalText;
         }
 
     } catch (err) {
-        console.error(err);
-        alert("Terjadi kesalahan jaringan");
-    } finally {
-        btnSimpan.disabled = false;
-        btnSimpan.innerText = labelSblm;
+        console.error("UPLOAD ERROR:", err);
+        
+        // Kembalikan UI Tombol jika terjadi error
+        const btnSimpan = document.getElementById("btnSimpan");
+        if (btnSimpan) {
+            btnSimpan.disabled = false;
+            btnSimpan.innerText = "Simpan Data Baru";
+        }
+
+        if (err.name === "AbortError") {
+            alert("Upload timeout! Server Google Apps Script memakan waktu terlalu lama (lebih dari 60 detik) untuk memproses Base64.");
+        } else {
+            alert("Terjadi kesalahan jaringan atau server gagal merespon.");
+        }
     }
 }
+
 // ================= KOSONGKAN BACKGROUND BARIS DATA =================
 async function hapusBgKhusus(row) {
     if (!confirm(`Apakah Anda yakin ingin menghapus file background pada baris ${row} dan mengembalikannya ke default?`)) return;
@@ -508,9 +547,11 @@ function resetForm() {
     document.getElementById("bgFile").value = "";
     
     const btnSimpan = document.getElementById("btnSimpan");
-    btnSimpan.innerText = "Simpan Data Baru";
-    btnSimpan.style.background = "#007bff";
-    btnSimpan.style.color = "white";
+    if (btnSimpan) {
+        btnSimpan.innerText = "Simpan Data Baru";
+        btnSimpan.style.background = "#007bff";
+        btnSimpan.style.color = "white";
+    }
     document.getElementById("btnBatal").style.display = "none";
     
     base64Image = "";
