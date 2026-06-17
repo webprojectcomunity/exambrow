@@ -324,6 +324,7 @@ document.getElementById("bgFile").addEventListener("change", function(e){
 });
 
 // ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
+// ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
 async function simpanDataTeks() {
     const formLink = document.getElementById("formLink").value.trim();
     const token = document.getElementById("token").value.trim();
@@ -336,22 +337,31 @@ async function simpanDataTeks() {
     }
 
     const btnSimpan = document.getElementById("btnSimpan");
+    const labelSblm = btnSimpan.innerText; // Menyimpan label tombol asli
     btnSimpan.disabled = true;
     btnSimpan.innerText = "Memproses...";
 
-    const formData = new URLSearchParams();
-    formData.append("action", editRow ? "update_text" : "add");
-    formData.append("formLink", formLink);
-    formData.append("token", token);
-    formData.append("mapel", mapel);
-    formData.append("durasi", durasi);
+    // Diubah dari URLSearchParams menjadi Objek JSON biasa
+    const payload = {
+        action: editRow ? "update_text" : "add",
+        formLink: formLink,
+        token: token,
+        mapel: mapel,
+        durasi: durasi
+    };
     
     if (editRow) {
-        formData.append("row", editRow);
+        payload.row = editRow;
     }
 
     try {
-        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const res = await fetch(API_URL, { 
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json" // Beritahu server bahwa ini data JSON asli
+            },
+            body: JSON.stringify(payload) // Konversi objek ke bentuk string JSON
+        });
         const result = await res.text();
 
         if (result.includes("SUCCESS")) {
@@ -366,8 +376,10 @@ async function simpanDataTeks() {
         alert("Terjadi gangguan jaringan saat menyimpan data.");
     } finally {
         btnSimpan.disabled = false;
+        btnSimpan.innerText = labelSblm; // Mengembalikan teks tombol ke semula
     }
 }
+
 
 // ================= MASUK MODE EDIT TEKS DATA =================
 function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
