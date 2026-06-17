@@ -692,25 +692,19 @@ window.addEventListener('resize', function() {
     }
 });
 
-// 1. Sensor Fokus Jendela (Lebih agresif tanpa jeda lama)
-window.addEventListener('blur', function() {
+// Sensor 1: Mendeteksi jika kursor keluar dari area browser (mencoba klik monitor 2 atau nyari taskbar)
+document.addEventListener('mouseleave', function() {
     if (!ujianBerjalan) return;
-
-    // Langsung cek tanpa setTimeout yang lama, atau gunakan jeda sangat pendek (misal: 50ms)
-    setTimeout(() => {
-        // Jika fokus benar-benar pindah ke luar browser/iframe
-        if (document.activeElement !== document.getElementById("gform-iframe")) {
-            catatPelanggaran("Fokus layar hilang! Dilarang membuka aplikasi lain atau menekan tombol sistem.");
-        }
-    }, 50); 
+    catatPelanggaran("Kursor meninggalkan area ujian! Jangan mencoba membuka aplikasi lain.");
 });
 
-// 2. Sensor Visibilitas Halaman (Mendeteksi jika ketutup aplikasi floating/start menu)
-document.addEventListener('visibilitychange', function() {
+// Sensor 2: Proteksi ekstra jika window kehilangan ukuran fullscreen-nya
+window.addEventListener('resize', function() {
     if (!ujianBerjalan) return;
     
-    if (document.hidden) {
-        catatPelanggaran("Layar ujian terhalang/terbuka di latar belakang!");
+    // Cek apakah ukuran layar tiba-tiba mengecil atau berubah (indikasi taskbar muncul)
+    if (window.innerHeight < window.screen.height - 50) { 
+        catatPelanggaran("Ukuran jendela ujian berubah. Jangan membuka aplikasi lain!");
     }
 });
 
