@@ -324,7 +324,6 @@ document.getElementById("bgFile").addEventListener("change", function(e){
 });
 
 // ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
-// ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
 async function simpanDataTeks() {
     const formLink = document.getElementById("formLink").value.trim();
     const token = document.getElementById("token").value.trim();
@@ -337,31 +336,22 @@ async function simpanDataTeks() {
     }
 
     const btnSimpan = document.getElementById("btnSimpan");
-    const labelSblm = btnSimpan.innerText; // Menyimpan label tombol asli
     btnSimpan.disabled = true;
     btnSimpan.innerText = "Memproses...";
 
-    // Diubah dari URLSearchParams menjadi Objek JSON biasa
-    const payload = {
-        action: editRow ? "update_text" : "add",
-        formLink: formLink,
-        token: token,
-        mapel: mapel,
-        durasi: durasi
-    };
+    const formData = new URLSearchParams();
+    formData.append("action", editRow ? "update_text" : "add");
+    formData.append("formLink", formLink);
+    formData.append("token", token);
+    formData.append("mapel", mapel);
+    formData.append("durasi", durasi);
     
     if (editRow) {
-        payload.row = editRow;
+        formData.append("row", editRow);
     }
 
     try {
-        const res = await fetch(API_URL, { 
-            method: "POST", 
-            headers: {
-                "Content-Type": "application/json" // Beritahu server bahwa ini data JSON asli
-            },
-            body: JSON.stringify(payload) // Konversi objek ke bentuk string JSON
-        });
+        const res = await fetch(API_URL, { method: "POST", body: formData });
         const result = await res.text();
 
         if (result.includes("SUCCESS")) {
@@ -376,10 +366,8 @@ async function simpanDataTeks() {
         alert("Terjadi gangguan jaringan saat menyimpan data.");
     } finally {
         btnSimpan.disabled = false;
-        btnSimpan.innerText = labelSblm; // Mengembalikan teks tombol ke semula
     }
 }
-
 
 // ================= MASUK MODE EDIT TEKS DATA =================
 function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
@@ -402,46 +390,60 @@ function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
 // ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 // ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 async function prosesUploadBgKhusus(row) {
+
+    // 🔥 VALIDASI AWAL
     if (!base64Image) {
-        alert("Pilih file gambar baru terlebih dahulu pada kotak penjelajah file di atas!");
+        alert("Pilih file gambar terlebih dahulu!");
         return;
     }
 
-    if (!confirm(`Apakah Anda yakin ingin menimpa/mengisi background pada baris ${row}?`)) return;
+    // 🔥 DEBUG (INI PENTING)
+    console.log("DEBUG IMAGE SIZE:", base64Image?.length);
+    console.log("DEBUG IMAGE PREVIEW:", base64Image?.substring(0, 80));
+
+    if (!confirm(`Apakah Anda yakin ingin upload background baris ${row}?`)) return;
 
     const btnSimpan = document.getElementById("btnSimpan");
     const labelSblm = btnSimpan.innerText;
+
     btnSimpan.disabled = true;
     btnSimpan.innerText = "Mengunggah Gambar...";
 
-    // SOLUSI: Menggunakan struktur objek JSON biasa yang dikirim mentah (raw payload)
-    // Ini menghindari batasan limit karakter teks pada URLSearchParams
     const payload = {
         action: "upload_bg",
         row: row,
-        image: base64Image // String base64 jpeg hasil kompresi canvas
+        image: base64Image
     };
 
     try {
-        const res = await fetch(API_URL, { 
-            method: "POST", 
-            // Mengirim dengan memicu e.postData.contents di Apps Script
-            body: JSON.stringify(payload) 
+        const res = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
         });
+
         const result = await res.text();
 
         if (result.includes("SUCCESS")) {
-            alert(`Sukses mengunggah background baru untuk data baris ${row}!`);
-            document.getElementById("bgFile").value = "";
+
+            alert(`Sukses upload background baris ${row}!`);
+
+            // reset
             base64Image = "";
+            document.getElementById("bgFile").value = "";
             document.getElementById("preview").style.backgroundImage = "";
+
             loadData();
+
         } else {
-            alert("Gagal upload. Respon Server: " + result);
+            alert("Gagal upload: " + result);
         }
+
     } catch (err) {
         console.error(err);
-        alert("Terjadi kesalahan jaringan saat mentransfer data gambar.");
+        alert("Terjadi kesalahan jaringan");
     } finally {
         btnSimpan.disabled = false;
         btnSimpan.innerText = labelSblm;
