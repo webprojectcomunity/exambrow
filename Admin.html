@@ -388,6 +388,7 @@ function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
 }
 
 // ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
+// ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 async function prosesUploadBgKhusus(row) {
     if (!base64Image) {
         alert("Pilih file gambar baru terlebih dahulu pada kotak penjelajah file di atas!");
@@ -401,14 +402,20 @@ async function prosesUploadBgKhusus(row) {
     btnSimpan.disabled = true;
     btnSimpan.innerText = "Mengunggah Gambar...";
 
-    // Menggunakan URLSearchParams agar kompatibel penuh dengan pembacaan e.parameter di Apps Script
-    const formData = new URLSearchParams();
-    formData.append("action", "upload_bg");
-    formData.append("row", row);
-    formData.append("image", base64Image); 
+    // SOLUSI: Menggunakan struktur objek JSON biasa yang dikirim mentah (raw payload)
+    // Ini menghindari batasan limit karakter teks pada URLSearchParams
+    const payload = {
+        action: "upload_bg",
+        row: row,
+        image: base64Image // String base64 jpeg hasil kompresi canvas
+    };
 
     try {
-        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const res = await fetch(API_URL, { 
+            method: "POST", 
+            // Mengirim dengan memicu e.postData.contents di Apps Script
+            body: JSON.stringify(payload) 
+        });
         const result = await res.text();
 
         if (result.includes("SUCCESS")) {
@@ -428,7 +435,6 @@ async function prosesUploadBgKhusus(row) {
         btnSimpan.innerText = labelSblm;
     }
 }
-
 // ================= KOSONGKAN BACKGROUND BARIS DATA =================
 async function hapusBgKhusus(row) {
     if (!confirm(`Apakah Anda yakin ingin menghapus file background pada baris ${row} dan mengembalikannya ke default?`)) return;
