@@ -9,13 +9,18 @@
 </head>
 <body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden">
 
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 z-20 hidden md:hidden transition-opacity"></div>
+
     <div class="flex h-full">
         
-        <div class="w-64 bg-slate-800 text-white flex flex-col hidden md:flex flex-shrink-0">
-            <div class="h-16 flex items-center justify-center border-b border-slate-700 px-6">
+        <div id="sidebar" class="fixed md:relative inset-y-0 left-0 w-64 bg-slate-800 text-white flex flex-col z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex-shrink-0">
+            <div class="h-16 flex items-center justify-between px-6 border-b border-slate-700">
                 <span class="text-lg font-bold tracking-wider uppercase flex items-center gap-2">
                     <i class="fa-solid fa-graduation-cap text-indigo-400"></i> ExamControl
                 </span>
+                <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white md:hidden focus:outline-none">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
             </div>
             
             <div class="flex-1 overflow-y-auto py-4">
@@ -42,17 +47,20 @@
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 w-full">
             
-            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 flex-shrink-0">
-                <div class="flex items-center gap-4">
-                    <h1 class="text-xl font-semibold text-slate-800" id="page-title">Dashboard Utama</h1>
+            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg md:hidden focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-base sm:text-xl font-semibold text-slate-800 truncate" id="page-title">Dashboard Utama</h1>
                 </div>
                 <div class="flex items-center gap-3">
-                    <div class="text-right hidden sm:block">
-                        <p class="text-sm font-medium text-slate-700">Administrator</p>
-                        <p class="text-xs text-emerald-500 flex items-center gap-1 justify-end">
-                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span> API Connected
+                    <div class="text-right">
+                        <p class="text-xs sm:text-sm font-medium text-slate-700">Administrator</p>
+                        <p class="text-[10px] sm:text-xs text-emerald-500 flex items-center gap-1 justify-end">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span> Connected
                         </p>
                     </div>
                 </div>
@@ -60,62 +68,64 @@
 
             <div class="flex-1 bg-slate-50 relative overflow-hidden">
                 
-                <div id="content-dashboard" class="p-6 max-w-7xl w-full mx-auto space-y-6 h-full overflow-y-auto block">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200/60 flex items-center justify-between">
+                <div id="content-dashboard" class="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6 h-full overflow-y-auto block">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200/60 flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-slate-500 uppercase">Total Sesi Ujian</p>
-                                <h3 id="stat-total-ujian" class="text-3xl font-bold text-slate-800 mt-1">...</h3>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Sesi Ujian</p>
+                                <h3 id="stat-total-ujian" class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">...</h3>
                             </div>
-                            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-xl">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-lg sm:text-xl">
                                 <i class="fa-solid fa-file-invoice"></i>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200/60 flex items-center justify-between">
+                        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200/60 flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-slate-500 uppercase">Token Aktif Terakhir</p>
-                                <h3 id="stat-token-aktif" class="text-xl font-mono font-bold text-emerald-600 mt-2">...</h3>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Token Aktif Terakhir</p>
+                                <h3 id="stat-token-aktif" class="text-lg sm:text-xl font-mono font-bold text-emerald-600 mt-1 break-all">...</h3>
                             </div>
-                            <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 text-xl">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 text-lg sm:text-xl">
                                 <i class="fa-solid fa-key"></i>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200/60 flex items-center justify-between">
+                        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200/60 flex items-center justify-between sm:col-span-2 lg:col-span-1">
                             <div>
-                                <p class="text-sm font-medium text-slate-500 uppercase">Mata Pelajaran Aktif</p>
-                                <h3 id="stat-mapel-aktif" class="text-lg font-bold text-slate-700 mt-2 truncate max-w-[180px]">...</h3>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Mata Pelajaran Aktif</p>
+                                <h3 id="stat-mapel-aktif" class="text-base sm:text-lg font-bold text-slate-700 mt-1 truncate max-w-[200px] sm:max-w-[300px] lg:max-w-[180px]">...</h3>
                             </div>
-                            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 text-xl">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 text-lg sm:text-xl">
                                 <i class="fa-solid fa-book"></i>
                             </div>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
-                        <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center bg-slate-50/50">
                             <div>
-                                <h2 class="text-base font-bold text-slate-800">Daftar Konfigurasi Ujian (Sheet SETTING)</h2>
-                                <p class="text-xs text-slate-500">Data real-time yang tersimpan pada server backend Anda.</p>
+                                <h2 class="text-sm sm:text-base font-bold text-slate-800">Daftar Konfigurasi Ujian (Sheet SETTING)</h2>
+                                <p class="text-[11px] sm:text-xs text-slate-500">Data real-time yang tersimpan pada server backend Anda.</p>
                             </div>
-                            <button onclick="loadDatabaseUjian()" class="text-xs font-semibold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all">
-                                <i class="fa-solid fa-arrows-rotate mr-1"></i> Sync Data
+                            <button onclick="loadDatabaseUjian()" class="text-xs font-semibold bg-indigo-50 text-indigo-600 px-3 py-2 rounded-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-1 w-full sm:w-auto">
+                                <i class="fa-solid fa-arrows-rotate"></i> Sync Data
                             </button>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
+                        
+                        <div class="overflow-x-auto block w-full whitespace-nowrap">
+                            <table class="w-full text-left border-collapse min-w-[700px]">
                                 <thead>
-                                    <tr class="bg-slate-800 text-white text-xs uppercase">
-                                        <th class="p-3">Row</th>
+                                    <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
+                                        <th class="p-3 w-16">Row</th>
                                         <th class="p-3">Mata Pelajaran</th>
-                                        <th class="p-3">Token</th>
-                                        <th class="p-3">Durasi</th>
+                                        <th class="p-3 w-28">Token</th>
+                                        <th class="p-3 w-28">Durasi</th>
                                         <th class="p-3">Link Soal (Form)</th>
-                                        <th class="p-3">Background Status</th>
+                                        <th class="p-3 w-36">Background Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="table-body-ujian" class="text-sm text-slate-700 divide-y divide-slate-100">
+                                <tbody id="table-body-ujian" class="text-xs sm:text-sm text-slate-700 divide-y divide-slate-100">
                                     <tr>
-                                        <td colspan="6" class="text-center py-8 text-slate-400">
+                                        <td colspan="6" class="text-center py-8 text-slate-400 whitespace-normal">
                                             <i class="fa-solid fa-spinner fa-spin mr-2"></i>Menghubungkan ke API Google Sheets...
                                         </td>
                                     </tr>
@@ -134,13 +144,26 @@
     </div>
 
     <script>
-        // Endpoint Google Apps Script Deployment URL Anda
         const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
+
+        // FUNGSI RESPONSIVE: TOGGLE OPEN/CLOSE SIDEBAR DI MOBILE
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
 
         // 1. FUNGSI AMBIL DATA REAL-TIME DARI GOOGLE SHEETS (GET)
         function loadDatabaseUjian() {
             const tableBody = document.getElementById('table-body-ujian');
-            tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi database server...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 whitespace-normal"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi database server...</td></tr>`;
 
             fetch(`${API_URL}?action=all`)
                 .then(response => response.json())
@@ -148,20 +171,20 @@
                     tableBody.innerHTML = "";
                     
                     if (!data || data.length === 0) {
-                        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Database kosong atau tidak ada konfigurasi aktif.</td></tr>`;
+                        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 whitespace-normal">Database kosong atau tidak ada konfigurasi aktif.</td></tr>`;
                         updateStats(0, "-", "-");
                         return;
                     }
 
                     data.forEach(item => {
                         const bgIndicator = item.background ? 
-                            `<span class="text-emerald-600 font-medium text-xs bg-emerald-50 px-2 py-1 rounded-md"><i class="fa-solid fa-image mr-1"></i>Tersedia</span>` : 
-                            `<span class="text-slate-400 text-xs bg-slate-50 px-2 py-1 rounded-md">Default / Kosong</span>`;
+                            `<span class="text-emerald-600 font-medium text-xs bg-emerald-50 px-2 py-1 rounded-md inline-flex items-center gap-1"><i class="fa-solid fa-image"></i>Tersedia</span>` : 
+                            `<span class="text-slate-400 text-xs bg-slate-50 px-2 py-1 rounded-md">Default</span>`;
 
                         tableBody.innerHTML += `
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="p-3 font-semibold text-slate-500">${item.row}</td>
-                                <td class="p-3 font-bold text-slate-800">${item.mapel || '-'}</td>
+                                <td class="p-3 font-bold text-slate-800 whitespace-normal min-w-[150px]">${item.mapel || '-'}</td>
                                 <td class="p-3"><span class="bg-indigo-50 text-indigo-700 font-mono px-2 py-0.5 rounded border border-indigo-100 text-xs">${item.token || '-'}</span></td>
                                 <td class="p-3 text-slate-600">${item.durasi || 0} Menit</td>
                                 <td class="p-3 max-w-xs truncate text-xs text-indigo-500 hover:underline"><a href="${item.formLink}" target="_blank">${item.formLink || '-'}</a></td>
@@ -175,7 +198,7 @@
                 })
                 .catch(error => {
                     console.error("Error Fetching Data: ", error);
-                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-500 font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Gagal Memuat Data Server. Pastikan Web App disetel aksesnya ke 'Anyone'.</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-500 font-medium whitespace-normal"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Gagal Memuat Data Server. Pastikan Web App disetel aksesnya ke 'Anyone'.</td></tr>`;
                 });
         }
 
@@ -185,7 +208,7 @@
             document.getElementById('stat-mapel-aktif').innerText = mapel || "-";
         }
 
-        // 2. LOGIC ROUTER TAB NAVIGATION (MUTAKHIR)
+        // 2. LOGIC ROUTER TAB NAVIGATION (DITAMBAHKAN AUTO-CLOSE SIDEBAR DI MOBILE)
         function switchTab(tabName, iframeUrl = '') {
             const dashboard = document.getElementById('content-dashboard');
             const iframeContainer = document.getElementById('content-ujian-container');
@@ -196,13 +219,17 @@
             const menuSiswa = document.getElementById('menu-siswa');
             const pageTitle = document.getElementById('page-title');
 
-            // Reset status kelas menu navigasi sidebar
+            // Tutup sidebar otomatis setelah klik menu di HP
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('-translate-x-full')) {
+                toggleSidebar();
+            }
+
             const baseClass = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors";
             menuDashboard.className = baseClass;
             menuUjian.className = baseClass;
             menuSiswa.className = baseClass;
 
-            // Sembunyikan semua blok elemen views terlebih dahulu
             dashboard.classList.remove('block');
             dashboard.classList.add('hidden');
             iframeContainer.classList.add('hidden');
@@ -212,22 +239,21 @@
                 dashboard.classList.add('block');
                 menuDashboard.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors";
                 pageTitle.innerText = "Dashboard Utama";
-                iframe.src = ""; // Bersihkan memori iframe
-                loadDatabaseUjian(); // Refresh data real-time
+                iframe.src = ""; 
+                loadDatabaseUjian(); 
             } else if (tabName === 'ujian') {
                 iframeContainer.classList.remove('hidden');
                 menuUjian.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors";
                 pageTitle.innerText = "Panel Administrasi Exambrow";
-                iframe.src = iframeUrl; // Memuat URL Admin.html eksternal
+                iframe.src = iframeUrl; 
             } else if (tabName === 'siswa') {
                 iframeContainer.classList.remove('hidden');
                 menuSiswa.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors";
-                pageTitle.innerText = "Pengaturan Status Kelulusan & Blokir Peserta";
-                iframe.src = iframeUrl; // Memuat berkas lokal siswa.html ke dalam iframe secara dinamis
+                pageTitle.innerText = "Status Kelulusan & Peserta";
+                iframe.src = iframeUrl; 
             }
         }
 
-        // Sinkronisasi otomatis saat pertama kali dibuka
         window.onload = loadDatabaseUjian;
     </script>
 </body>
