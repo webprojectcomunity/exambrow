@@ -692,15 +692,37 @@ window.addEventListener('resize', function() {
     }
 });
 
-// 4. SENSOR ANTI DUAL MONITOR & FLOATING APPS
+// 1. Sensor Fokus Jendela (Lebih agresif tanpa jeda lama)
 window.addEventListener('blur', function() {
     if (!ujianBerjalan) return;
 
+    // Langsung cek tanpa setTimeout yang lama, atau gunakan jeda sangat pendek (misal: 50ms)
     setTimeout(() => {
+        // Jika fokus benar-benar pindah ke luar browser/iframe
         if (document.activeElement !== document.getElementById("gform-iframe")) {
-            catatPelanggaran("Fokus layar hilang! Dilarang berinteraksi dengan layar kedua atau jendela aplikasi lain.");
+            catatPelanggaran("Fokus layar hilang! Dilarang membuka aplikasi lain atau menekan tombol sistem.");
         }
-    }, 400);
+    }, 50); 
+});
+
+// 2. Sensor Visibilitas Halaman (Mendeteksi jika ketutup aplikasi floating/start menu)
+document.addEventListener('visibilitychange', function() {
+    if (!ujianBerjalan) return;
+    
+    if (document.hidden) {
+        catatPelanggaran("Layar ujian terhalang/terbuka di latar belakang!");
+    }
+});
+
+// 3. Sensor Keluar Fullscreen (Menahan tombol Windows/Dual Monitor secara fisik)
+document.addEventListener('fullscreenchange', function() {
+    if (!ujianBerjalan) return;
+
+    if (!document.fullscreenElement) {
+        catatPelanggaran("Mode Fullscreen dimatikan! Anda mencoba membuka aplikasi lain.");
+        // Opsional: Paksa masuk fullscreen lagi jika diperbolehkan
+        // mintaFullscreen();
+    }
 });
 
 // 5. Proses Validasi Hitung Pelanggaran Sisa Kesempatan + Bunyi Alarm
