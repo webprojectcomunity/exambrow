@@ -107,10 +107,10 @@
                       <h3 class="font-bold text-slate-800 mb-4">Grafik Indikator Kecurangan</h3>
                       <canvas id="chartIndikator"></canvas>
                         </div>
-                             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                             <h3 class="font-bold text-slate-800 mb-4">Distribusi Kecurangan per Kelas</h3>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4">Rincian Penyelesaian & Kecurangan Ujian</h3>
                              <canvas id="chartKelas"></canvas>
-                         </div>
+                            </div>
                          </div>
 
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
@@ -218,42 +218,82 @@
     }
 
     // 2. FUNGSI AMBIL & RENDER GRAFIK KECURANGAN
-    async function loadCharts() {
-        try {
-            const response = await fetch(`${API_URL}?action=stats_kecurangan`);
-            const data = await response.json();
-            
-            if (chartIndikator) chartIndikator.destroy();
-            if (chartKelas) chartKelas.destroy();
-            
-            chartIndikator = new Chart(document.getElementById('chartIndikator'), {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(data.byIndikator),
-                    datasets: [{
-                        data: Object.values(data.byIndikator),
-                        backgroundColor: ['#f43f5e', '#f59e0b', '#6366f1', '#10b981']
-                    }]
-                }
-            });
+   async function loadCharts() {
+    try {
+        const response = await fetch(`${API_URL}?action=stats_kecurangan`);
+        const data = await response.json();
+        
+        // Bersihkan instance lama jika ada
+        if (chartIndikator) chartIndikator.destroy();
+        if (chartKelas) chartKelas.destroy();
+        
+        // 1. Render Chart Pie (Indikator) - Tetap sama
+        chartIndikator = new Chart(document.getElementById('chartIndikator'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(data.byIndikator),
+                datasets: [{
+                    data: Object.values(data.byIndikator),
+                    backgroundColor: ['#f43f5e', '#f59e0b', '#6366f1', '#10b981']
+                }]
+            }
+        });
 
-            chartKelas = new Chart(document.getElementById('chartKelas'), {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(data.byKelas),
-                    datasets: [{
-                        label: 'Jumlah Kecurangan',
-                        data: Object.values(data.byKelas),
-                        backgroundColor: '#6366f1'
-                    }]
+        // 2. Olah Data untuk Chart Rincian (Baru)
+        const labelSesi = Object.keys(data.rincianSesi); // ["7.1 - MTK (12/10)", ...]
+        const dataSelesai = labelSesi.map(key => data.rincianSesi[key].selesai);
+        const dataCurang = labelSesi.map(key => data.rincianSesi[key].curang);
+
+        // 3. Render Chart Stacked Bar
+        chartKelas = new Chart(document.getElementById('chartKelas'), {
+            type: 'bar',
+            data: {
+                labels: labelSesi,
+                datasets: [
+                    {
+                        label: 'Menyelesaikan Ujian',
+                        data: dataSelesai,
+                        backgroundColor: '#10b981', // Emerald green
+                        stack: 'Stack 0',
+                    },
+                    {
+                        label: 'Diblokir / Curang',
+                        data: dataCurang,
+                        backgroundColor: '#f43f5e', // Rose red
+                        stack: 'Stack 0',
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            // Menambahkan Persentase saat chart di-hover
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const total = dataSelesai[index] + dataCurang[index];
+                                const value = context.raw;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${context.dataset.label}: ${value} Siswa (${percentage}%)`;
+                            }
+                        }
+                    }
                 },
-                options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-            });
-        } catch (e) {
-            console.error("Gagal memuat chart:", e);
-        }
+                scales: { 
+                    x: { stacked: true },
+                    y: { 
+                        stacked: true, 
+                        beginAtZero: true, 
+                        ticks: { stepSize: 1 } 
+                    } 
+                } 
+            }
+        });
+    } catch (e) {
+        console.error("Gagal memuat chart:", e);
     }
-
+}
     function updateStats(total, token, mapel) {
         document.getElementById('stat-total-ujian').innerText = total;
         document.getElementById('stat-token-aktif').innerText = token || "-";
