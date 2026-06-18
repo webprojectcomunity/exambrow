@@ -22,7 +22,7 @@
         #content-ujian-container { height: calc(100vh - 56px); }
     </style>
 </head>
-<body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden">
+<body class="bg-slate-100 font-sans antialiased min-h-screen">
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 z-20 hidden transition-opacity md:hidden"></div>
 
@@ -92,9 +92,9 @@
                 </div>
             </header>
 
-            <div class="flex-1 bg-slate-50 relative overflow-hidden">
+            <div class="flex-1 bg-slate-50 min-h-screen">
                 
-                <div id="content-dashboard" class="p-3 max-w-7xl w-full mx-auto space-y-4 h-full overflow-y-auto block sm:p-4">
+                <div id="content-dashboard" class="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6 overflow-y-auto">
                     
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200/60 flex items-center justify-between">
@@ -174,22 +174,23 @@
                     </div>
                 </div>
 
-                <div id="content-ujian-container" class="w-full h-full hidden">
-                    <iframe id="ujian-iframe" src="" class="w-full h-full border-0"></iframe>
-                </div>
+                <div id="content-ujian-container" class="w-full h-[80vh] hidden"> <iframe id="ujian-iframe" src="" class="w-full h-full border-0"></iframe>
+                 </div>
 
             </div>
         </div>
     </div>
 
 <script>
+    // URL Web App Google Apps Script (Code.gs)
     const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
     // Variables Global
     let chartIndikator = null;
     let chartKelas = null;
     let databaseSiswa = [];
-    let isLockedGlobal = false; // Cache status lock aplikasi
+    let isLockedGlobal = false;     // Sesuai data asli server
+    let isProcessingLock = false;   // Mengunci tombol saat fetch agar anti-spam click
 
     // RESPONSIVE SIDEBAR MOBILE
     function toggleSidebar() {
@@ -205,9 +206,11 @@
         }
     }
 
-    // 1. AMBIL DATA CONFIGURASI UJIAN
+    // 1. AMBIL DATA KONFIGURASI UJIAN
     function loadDatabaseUjian() {
         const tableBody = document.getElementById('table-body-ujian');
+        if (!tableBody) return;
+        
         tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi...</td></tr>`;
 
         fetch(`${API_URL}?action=all`)
@@ -245,9 +248,12 @@
             });
     }
 
-    // 2. REALTIME AMBIL DATA SISWA (TABEL)
+    // 2. REALTIME AMBIL DATA SISWA (MENGGUNAKAN ID BERBEDA AGAR TIDAK BENTROK)
     async function muatDataSiswa(isSilent = false) {
-        const tbody = document.getElementById("table-body-ujian"); // Diubah menyesuaikan ID di script Anda
+        // ⚠️ FIXED: ID diubah menjadi 'table-body-siswa' agar data tidak menimpa daftar konfigurasi ujian!
+        const tbody = document.getElementById("table-body-siswa"); 
+        if (!tbody && !isSilent) return;
+
         try {
             const response = await fetch(`${API_URL}?action=all_siswa`);
             const data = await response.json();
@@ -264,6 +270,10 @@
 
     // 3. REALTIME AMBIL & RENDER CHART KECURANGAN
     async function loadCharts() {
+        const chartIndikatorEl = document.getElementById('chartIndikator');
+        const chartKelasEl = document.getElementById('chartKelas');
+        if (!chartIndikatorEl || !chartKelasEl) return; // Proteksi jika elemen canvas absen di tab aktif
+
         try {
             const response = await fetch(`${API_URL}?action=stats_kecurangan`);
             const data = await response.json();
@@ -282,7 +292,7 @@
                 return badColors[colorIndex++ % badColors.length];
             });
 
-            chartIndikator = new Chart(document.getElementById('chartIndikator'), {
+            chartIndikator = new Chart(chartIndikatorEl, {
                 type: 'pie',
                 data: {
                     labels: labelsPie,
@@ -297,7 +307,7 @@
             const dataSelesai = labelSesi.map(key => data.rincianSesi[key].selesai);
             const dataCurang = labelSesi.map(key => data.rincianSesi[key].curang);
 
-            chartKelas = new Chart(document.getElementById('chartKelas'), {
+            chartKelas = new Chart(chartKelasEl, {
                 type: 'bar',
                 data: {
                     labels: labelSesi,
@@ -327,12 +337,14 @@
         }
     }
 
-    // 4. LOGIKA AMBIL & TOGGLE LOCK GLOBAL STATUS
+    // 4. LOGIKA AMBIL & TOGGLE LOCK GLOBAL STATUS (SINKRON & REALTIME)
     async function muatStatusGlobal() {
+        if (isProcessingLock) return; // Lewati sinkronisasi background jika admin sedang klik tombol
+
         try {
             const response = await fetch(`${API_URL}?action=get_lock_status`);
             const data = await response.json();
-            isLockedGlobal = data.locked; // true jika dikunci, false jika dibuka
+            isLockedGlobal = data.locked; // Ambil nilai boolean murni dari server
             renderStatusGlobalUI(isLockedGlobal);
         } catch (e) {
             console.error("Gagal memuat status global lock:", e);
@@ -340,22 +352,45 @@
     }
 
     async function toggleGlobalLock() {
-        const btn = document.getElementById('btn-global-lock');
-        const badge = document.getElementById('badge-global-lock');
+        if (isProcessingLock) return; // Cegah double trigger/spam klik
         
-        // Optimistic UI Update (Ubah warna instan sebelum fetch selesai agar terasa responsif)
         const targetState = !isLockedGlobal;
-        renderStatusGlobalUI(targetState);
+        
+        // Meminta konfirmasi tindakan pengawas
+        const konfirmasi = targetState 
+            ? "Apakah Anda yakin ingin MENUTUP/MENGUNCI portal login ujian untuk seluruh siswa?" 
+            : "Apakah Anda yakin ingin MEMBUKA kembali akses portal login ujian?";
+            
+        if (!confirm(konfirmasi)) return;
+
+        isProcessingLock = true;
+        const btn = document.getElementById('btn-global-lock');
+        if (btn) btn.classList.add('opacity-40', 'cursor-wait'); // Tanda loading pada tombol
 
         try {
-            const response = await fetch(`${API_URL}?action=set_lock_status&locked=${targetState}`);
+            // Mengubah struktur pengiriman ke POST (MQL/Data Form) agar diproses aman oleh doPost(e) Apps Script
+            const payloadData = new URLSearchParams();
+            payloadData.append("action", "set_lock_status");
+            payloadData.append("locked", targetState.toString());
+
+            const response = await fetch(API_URL, {
+                method: "POST",
+                body: payloadData
+            });
             const data = await response.json();
-            isLockedGlobal = data.locked;
-            renderStatusGlobalUI(isLockedGlobal);
+
+            if (data.success || data.locked !== undefined) {
+                isLockedGlobal = data.locked !== undefined ? data.locked : targetState;
+            } else {
+                alert("Gagal mengubah status di lembar kerja.");
+            }
         } catch (e) {
-            console.error("Gagal merubah status global lock:", e);
-            renderStatusGlobalUI(isLockedGlobal); // Balikkan ke status semula jika gagal kueri
-            alert("Gagal mengubah status server. Periksa koneksi internet.");
+            console.error("Gagal mengubah status global lock:", e);
+            alert("Terjadi masalah jaringan server. Status gagal diperbarui.");
+        } finally {
+            isProcessingLock = false;
+            if (btn) btn.classList.remove('opacity-40', 'cursor-wait');
+            renderStatusGlobalUI(isLockedGlobal); // Render kepastian UI akhir
         }
     }
 
@@ -365,15 +400,17 @@
         const text = document.getElementById('text-global-lock');
         const badge = document.getElementById('badge-global-lock');
 
+        if (!btn || !icon || !text || !badge) return;
+
         if (isLocked) {
-            // Gaya UI saat sistem DIKUNCI GLOBAL (Non-Aktifkan Siswa)
+            // Gaya UI saat sistem DIKUNCI GLOBAL (Sesi Siswa Non-Aktif / Tutup)
             btn.className = "w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg bg-rose-600/20 text-rose-400 border border-rose-500/30 transition-all duration-200";
             icon.className = "fa-solid fa-lock w-5 text-center text-rose-400";
             text.innerText = "Status: NON-AKTIF";
-            badge.className = "bg-rose-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded uppercase";
-            badge.innerText = "Lock";
+            badge.className = "bg-rose-500 text-slate-900 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase";
+            badge.innerText = "Tutup";
         } else {
-            // Gaya UI saat sistem DIBUKA GLOBAL (Aktifkan Siswa)
+            // Gaya UI saat sistem DIBUKA GLOBAL (Sesi Siswa Aktif / Buka)
             btn.className = "w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 transition-all duration-200";
             icon.className = "fa-solid fa-lock-open w-5 text-center text-emerald-400";
             text.innerText = "Status: AKTIF";
@@ -383,9 +420,13 @@
     }
 
     function updateStats(total, token, mapel) {
-        document.getElementById('stat-total-ujian').innerText = total;
-        document.getElementById('stat-token-aktif').innerText = token || "-";
-        document.getElementById('stat-mapel-aktif').innerText = mapel || "-";
+        const elTotal = document.getElementById('stat-total-ujian');
+        const elToken = document.getElementById('stat-token-aktif');
+        const elMapel = document.getElementById('stat-mapel-aktif');
+        
+        if (elTotal) elTotal.innerText = total;
+        if (elToken) elToken.innerText = token || "-";
+        if (elMapel) elMapel.innerText = mapel || "-";
     }
 
     // ROUTER TAB MANAGEMENT
@@ -397,37 +438,39 @@
         const sidebar = document.getElementById('sidebar');
         if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
 
-        dashboard.classList.add('hidden');
-        iframeContainer.classList.add('hidden');
+        if (dashboard) dashboard.classList.add('hidden');
+        if (iframeContainer) iframeContainer.classList.add('hidden');
 
         if (tabName === 'dashboard') {
-            dashboard.classList.remove('hidden');
-            dashboard.classList.add('block');
+            if (dashboard) {
+                dashboard.classList.remove('hidden');
+                dashboard.classList.add('block');
+            }
             document.getElementById('page-title').innerText = "Dashboard Utama";
             loadDatabaseUjian();
             loadCharts();
             muatStatusGlobal();
         } else {
-            iframeContainer.classList.remove('hidden');
-            iframe.src = iframeUrl;
+            if (iframeContainer) iframeContainer.classList.remove('hidden');
+            if (iframe) iframe.src = iframeUrl;
             document.getElementById('page-title').innerText = tabName === 'ujian' ? "Panel Administrasi" : "Status Siswa";
         }
     }
 
     // --- MANAJEMEN TIMER REALTIME TERPADU ---
     window.onload = () => {
-        // Pemuatan data pertama kali saat web dibuka
+        // Pemuatan data pertama kali secara penuh saat dashboard dibuka
         loadDatabaseUjian();
         muatDataSiswa(false);
         loadCharts();
         muatStatusGlobal();
 
-        // Loop background sync berjalan simultan setiap 10 detik tanpa refresh halaman
+        // Engine Polling Real-Time: Sinkronisasi otomatis berjalan di latar belakang setiap 10 detik
         setInterval(() => {
-            console.log("Melakukan sinkronisasi otomatis di latar belakang...");
+            console.log("Melakukan sinkronisasi otomatis dashboard di latar belakang...");
             muatDataSiswa(true); 
             loadCharts();        
-            muatStatusGlobal(); // Terus sinkronkan status lock jika diubah dari device admin lain
+            muatStatusGlobal(); // Mendeteksi perubahan saklar jika diubah pengawas lain dari device berbeda
         }, 10000); 
     };
 </script>
