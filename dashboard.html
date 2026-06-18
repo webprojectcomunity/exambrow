@@ -376,25 +376,32 @@
         payloadData.append("action", "set_lock_status");
         payloadData.append("locked", targetState.toString());
 
+        // PENTING: Jangan gunakan 'no-cors' agar kita bisa memvalidasi respon server.
+        // Pastikan Web App Anda di-deploy dengan opsi:
+        // Execute as: Me | Who has access: Anyone
         const response = await fetch(API_URL, {
             method: "POST",
-            mode: "no-cors", // Gunakan 'no-cors' jika terjadi error CORS pada Google Apps Script
             body: payloadData
         });
 
-        // Catatan: Jika menggunakan mode 'no-cors', kita tidak bisa membaca response.json()
-        // Kita berasumsi berhasil jika fetch tidak melempar error
-        
-        // Simulasi sukses (karena no-cors tidak mengembalikan data json)
-        isLockedGlobal = targetState;
-        alert("Status berhasil diperbarui!");
+        const result = await response.json(); // Sekarang kita bisa membaca konfirmasi dari server
+
+        if (result.success) {
+            // Update status HANYA JIKA server mengonfirmasi penyimpanan berhasil
+            isLockedGlobal = result.locked; 
+            alert("Status berhasil diperbarui di server!");
+        } else {
+            throw new Error(result.message || "Gagal mengubah status di lembar kerja.");
+        }
 
     } catch (e) {
-        console.error("Gagal mengubah status:", e);
-        alert("Terjadi masalah jaringan: " + e.message + ". Pastikan koneksi stabil.");
+        console.error("Error:", e);
+        alert("Gagal: " + e.message + ". Pastikan koneksi dan izin Google Apps Script sudah benar.");
+        // Kembalikan status variabel global ke nilai asli sebelum error terjadi
     } finally {
         isProcessingLock = false;
         if (btn) btn.classList.remove('opacity-40', 'cursor-wait');
+        // Render ulang UI berdasarkan status data yang TEPAT dari server
         renderStatusGlobalUI(isLockedGlobal);
     }
 }
