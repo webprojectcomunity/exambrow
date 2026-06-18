@@ -176,23 +176,31 @@
         // ======================================
         // LOGIC LIVE FILTER (CARI & STATUS)
         // ======================================
-        function jalankanFilter() {
-            const keyword = document.getElementById("cari").value.toLowerCase().trim();
-            const statusTarget = document.getElementById("status").value;
+       // ======================================
+// LOGIC LIVE FILTER (CARI & STATUS)
+// ======================================
+function jalankanFilter() {
+    const keyword = document.getElementById("cari").value.toLowerCase().trim();
+    const statusTarget = document.getElementById("status").value;
 
-            const hasilFilter = databaseSiswa.filter(siswa => {
-                const namaSiswa = (siswa.nama || "").toLowerCase();
-                const nisSiswa = (siswa.nis || "").toLowerCase();
-                const statusSiswa = siswa.status || "";
+    const hasilFilter = databaseSiswa.filter(siswa => {
+        const namaSiswa = (siswa.nama || "").toLowerCase();
+        const nisSiswa = (siswa.nis || "").toLowerCase();
+        const kelasSiswa = (siswa.kelas || "").toLowerCase(); // Tambahkan ini
+        const statusSiswa = siswa.status || "";
 
-                const cocokKeyword = namaSiswa.includes(keyword) || nisSiswa.includes(keyword);
-                const cocokStatus = statusTarget === "" || statusSiswa === statusTarget;
+        // Logika: Pencarian cocok jika keyword ada di NAMA, NIS, atau KELAS
+        const cocokKeyword = namaSiswa.includes(keyword) || 
+                             nisSiswa.includes(keyword) || 
+                             kelasSiswa.includes(keyword); // Tambahkan filter kelas
+                             
+        const cocokStatus = statusTarget === "" || statusSiswa === statusTarget;
 
-                return cocokKeyword && cocokStatus;
-            });
+        return cocokKeyword && cocokStatus;
+    });
 
-            render(hasilFilter);
-        }
+    render(hasilFilter);
+}
 
         // ======================================
         // EVENT EDIT SISWA VIA PROMPT
