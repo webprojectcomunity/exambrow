@@ -100,6 +100,19 @@
                         </div>
                     </div>
 
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                      <h3 class="font-bold text-slate-800 mb-4">Grafik Indikator Kecurangan</h3>
+                      <canvas id="chartIndikator"></canvas>
+                        </div>
+                             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                             <h3 class="font-bold text-slate-800 mb-4">Distribusi Kecurangan per Kelas</h3>
+                             <canvas id="chartKelas"></canvas>
+                         </div>
+                         </div>
+
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
                         <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center bg-slate-50/50">
                             <div>
@@ -143,118 +156,141 @@
         </div>
     </div>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
+   <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
-        // FUNGSI RESPONSIVE: TOGGLE OPEN/CLOSE SIDEBAR DI MOBILE
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
+    // Instance grafik global agar bisa di-destroy
+    let chartIndikator = null;
+    let chartKelas = null;
+
+    // FUNGSI RESPONSIVE: TOGGLE OPEN/CLOSE SIDEBAR DI MOBILE
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        if (sidebar.classList.contains('-translate-x-full')) {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+        } else {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
         }
+    }
 
-        // 1. FUNGSI AMBIL DATA REAL-TIME DARI GOOGLE SHEETS (GET)
-        function loadDatabaseUjian() {
-            const tableBody = document.getElementById('table-body-ujian');
-            tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 whitespace-normal"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi database server...</td></tr>`;
+    // 1. FUNGSI AMBIL DATA UJIAN
+    function loadDatabaseUjian() {
+        const tableBody = document.getElementById('table-body-ujian');
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi...</td></tr>`;
 
-            fetch(`${API_URL}?action=all`)
-                .then(response => response.json())
-                .then(data => {
-                    tableBody.innerHTML = "";
-                    
-                    if (!data || data.length === 0) {
-                        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 whitespace-normal">Database kosong atau tidak ada konfigurasi aktif.</td></tr>`;
-                        updateStats(0, "-", "-");
-                        return;
-                    }
+        fetch(`${API_URL}?action=all`)
+            .then(response => response.json())
+            .then(data => {
+                tableBody.innerHTML = "";
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Database kosong.</td></tr>`;
+                    updateStats(0, "-", "-");
+                    return;
+                }
 
-                    data.forEach(item => {
-                        const bgIndicator = item.background ? 
-                            `<span class="text-emerald-600 font-medium text-xs bg-emerald-50 px-2 py-1 rounded-md inline-flex items-center gap-1"><i class="fa-solid fa-image"></i>Tersedia</span>` : 
-                            `<span class="text-slate-400 text-xs bg-slate-50 px-2 py-1 rounded-md">Default</span>`;
+                data.forEach(item => {
+                    const bgIndicator = item.background ? 
+                        `<span class="text-emerald-600 text-xs bg-emerald-50 px-2 py-1 rounded-md">Tersedia</span>` : 
+                        `<span class="text-slate-400 text-xs bg-slate-50 px-2 py-1 rounded-md">Default</span>`;
 
-                        tableBody.innerHTML += `
-                            <tr class="hover:bg-slate-50/80 transition-colors">
-                                <td class="p-3 font-semibold text-slate-500">${item.row}</td>
-                                <td class="p-3 font-bold text-slate-800 whitespace-normal min-w-[150px]">${item.mapel || '-'}</td>
-                                <td class="p-3"><span class="bg-indigo-50 text-indigo-700 font-mono px-2 py-0.5 rounded border border-indigo-100 text-xs">${item.token || '-'}</span></td>
-                                <td class="p-3 text-slate-600">${item.durasi || 0} Menit</td>
-                                <td class="p-3 max-w-xs truncate text-xs text-indigo-500 hover:underline"><a href="${item.formLink}" target="_blank">${item.formLink || '-'}</a></td>
-                                <td class="p-3">${bgIndicator}</td>
-                            </tr>
-                        `;
-                    });
-
-                    const latestConfig = data[data.length - 1];
-                    updateStats(data.length, latestConfig.token, latestConfig.mapel);
-                })
-                .catch(error => {
-                    console.error("Error Fetching Data: ", error);
-                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-500 font-medium whitespace-normal"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Gagal Memuat Data Server. Pastikan Web App disetel aksesnya ke 'Anyone'.</td></tr>`;
+                    tableBody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-3 font-semibold text-slate-500">${item.row}</td>
+                            <td class="p-3 font-bold text-slate-800">${item.mapel || '-'}</td>
+                            <td class="p-3"><span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs">${item.token || '-'}</span></td>
+                            <td class="p-3 text-slate-600">${item.durasi || 0} Menit</td>
+                            <td class="p-3 text-xs text-indigo-500 hover:underline"><a href="${item.formLink}" target="_blank">Link Form</a></td>
+                            <td class="p-3">${bgIndicator}</td>
+                        </tr>
+                    `;
                 });
-        }
+                const latestConfig = data[data.length - 1];
+                updateStats(data.length, latestConfig.token, latestConfig.mapel);
+            })
+            .catch(err => {
+                console.error(err);
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-500">Gagal memuat data.</td></tr>`;
+            });
+    }
 
-        function updateStats(total, token, mapel) {
-            document.getElementById('stat-total-ujian').innerText = total;
-            document.getElementById('stat-token-aktif').innerText = token || "-";
-            document.getElementById('stat-mapel-aktif').innerText = mapel || "-";
-        }
-
-        // 2. LOGIC ROUTER TAB NAVIGATION (DITAMBAHKAN AUTO-CLOSE SIDEBAR DI MOBILE)
-        function switchTab(tabName, iframeUrl = '') {
-            const dashboard = document.getElementById('content-dashboard');
-            const iframeContainer = document.getElementById('content-ujian-container');
-            const iframe = document.getElementById('ujian-iframe');
+    // 2. FUNGSI AMBIL & RENDER GRAFIK KECURANGAN
+    async function loadCharts() {
+        try {
+            const response = await fetch(`${API_URL}?action=stats_kecurangan`);
+            const data = await response.json();
             
-            const menuDashboard = document.getElementById('menu-dashboard');
-            const menuUjian = document.getElementById('menu-ujian');
-            const menuSiswa = document.getElementById('menu-siswa');
-            const pageTitle = document.getElementById('page-title');
+            if (chartIndikator) chartIndikator.destroy();
+            if (chartKelas) chartKelas.destroy();
+            
+            chartIndikator = new Chart(document.getElementById('chartIndikator'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data.byIndikator),
+                    datasets: [{
+                        data: Object.values(data.byIndikator),
+                        backgroundColor: ['#f43f5e', '#f59e0b', '#6366f1', '#10b981']
+                    }]
+                }
+            });
 
-            // Tutup sidebar otomatis setelah klik menu di HP
-            const sidebar = document.getElementById('sidebar');
-            if (!sidebar.classList.contains('-translate-x-full')) {
-                toggleSidebar();
-            }
-
-            const baseClass = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors";
-            menuDashboard.className = baseClass;
-            menuUjian.className = baseClass;
-            menuSiswa.className = baseClass;
-
-            dashboard.classList.remove('block');
-            dashboard.classList.add('hidden');
-            iframeContainer.classList.add('hidden');
-
-            if (tabName === 'dashboard') {
-                dashboard.classList.remove('hidden');
-                dashboard.classList.add('block');
-                menuDashboard.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors";
-                pageTitle.innerText = "Dashboard Utama";
-                iframe.src = ""; 
-                loadDatabaseUjian(); 
-            } else if (tabName === 'ujian') {
-                iframeContainer.classList.remove('hidden');
-                menuUjian.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors";
-                pageTitle.innerText = "Panel Administrasi Exambrow";
-                iframe.src = iframeUrl; 
-            } else if (tabName === 'siswa') {
-                iframeContainer.classList.remove('hidden');
-                menuSiswa.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white transition-colors";
-                pageTitle.innerText = "Status Kelulusan & Peserta";
-                iframe.src = iframeUrl; 
-            }
+            chartKelas = new Chart(document.getElementById('chartKelas'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.byKelas),
+                    datasets: [{
+                        label: 'Jumlah Kecurangan',
+                        data: Object.values(data.byKelas),
+                        backgroundColor: '#6366f1'
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+        } catch (e) {
+            console.error("Gagal memuat chart:", e);
         }
+    }
 
-        window.onload = loadDatabaseUjian;
-    </script>
+    function updateStats(total, token, mapel) {
+        document.getElementById('stat-total-ujian').innerText = total;
+        document.getElementById('stat-token-aktif').innerText = token || "-";
+        document.getElementById('stat-mapel-aktif').innerText = mapel || "-";
+    }
+
+    // 3. ROUTER TAB
+    function switchTab(tabName, iframeUrl = '') {
+        const dashboard = document.getElementById('content-dashboard');
+        const iframeContainer = document.getElementById('content-ujian-container');
+        const iframe = document.getElementById('ujian-iframe');
+        
+        // Reset Sidebar Mobile
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+
+        // Hide All
+        dashboard.classList.add('hidden');
+        iframeContainer.classList.add('hidden');
+
+        if (tabName === 'dashboard') {
+            dashboard.classList.remove('hidden');
+            dashboard.classList.add('block');
+            document.getElementById('page-title').innerText = "Dashboard Utama";
+            loadDatabaseUjian();
+            loadCharts(); // Panggil grafik
+        } else {
+            iframeContainer.classList.remove('hidden');
+            iframe.src = iframeUrl;
+            document.getElementById('page-title').innerText = tabName === 'ujian' ? "Panel Administrasi" : "Status Siswa";
+        }
+    }
+
+    window.onload = () => {
+        loadDatabaseUjian();
+        loadCharts();
+    };
+</script>
 </body>
 </html>
