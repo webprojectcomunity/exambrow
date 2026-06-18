@@ -39,6 +39,17 @@
                         <i class="fa-solid fa-users w-5 text-center"></i>
                         Pengaturan Siswa
                     </button>
+
+                    <div class="pt-4 mt-4 border-t border-slate-700">
+                        <p class="text-[10px] uppercase font-semibold text-slate-500 px-4 mb-2 tracking-wider">Status Aplikasi Global</p>
+                        <button onclick="toggleGlobalLock()" id="btn-global-lock" class="w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 transition-all duration-200">
+                            <span class="flex items-center gap-3">
+                                <i id="icon-global-lock" class="fa-solid fa-lock-open w-5 text-center"></i>
+                                <span id="text-global-lock">Status: AKTIF</span>
+                            </span>
+                            <span id="badge-global-lock" class="bg-emerald-500 text-slate-900 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase">Buka</span>
+                        </button>
+                    </div>
                 </nav>
             </div>
             
@@ -102,16 +113,16 @@
 
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                      <h3 class="font-bold text-slate-800 mb-4">Grafik Indikator Kecurangan</h3>
-                      <canvas id="chartIndikator"></canvas>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4">Grafik Indikator Kecurangan</h3>
+                            <canvas id="chartIndikator"></canvas>
                         </div>
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                             <h3 class="font-bold text-slate-800 mb-4">Rincian Penyelesaian & Kecurangan Ujian</h3>
-                             <canvas id="chartKelas"></canvas>
-                            </div>
-                         </div>
+                            <canvas id="chartKelas"></canvas>
+                        </div>
+                    </div>
 
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
                         <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center bg-slate-50/50">
@@ -156,14 +167,16 @@
         </div>
     </div>
 
-   <script>
+<script>
     const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
-    // Instance grafik global agar bisa di-destroy
+    // Variables Global
     let chartIndikator = null;
     let chartKelas = null;
+    let databaseSiswa = [];
+    let isLockedGlobal = false; // Cache status lock aplikasi
 
-    // FUNGSI RESPONSIVE: TOGGLE OPEN/CLOSE SIDEBAR DI MOBILE
+    // RESPONSIVE SIDEBAR MOBILE
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
@@ -177,7 +190,7 @@
         }
     }
 
-    // 1. FUNGSI AMBIL DATA UJIAN
+    // 1. AMBIL DATA CONFIGURASI UJIAN
     function loadDatabaseUjian() {
         const tableBody = document.getElementById('table-body-ujian');
         tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi...</td></tr>`;
@@ -217,8 +230,25 @@
             });
     }
 
-    // 2. FUNGSI AMBIL & RENDER GRAFIK KECURANGAN
-   async function loadCharts() {
+    // 2. REALTIME AMBIL DATA SISWA (TABEL)
+    async function muatDataSiswa(isSilent = false) {
+        const tbody = document.getElementById("table-body-ujian"); // Diubah menyesuaikan ID di script Anda
+        try {
+            const response = await fetch(`${API_URL}?action=all_siswa`);
+            const data = await response.json();
+            if (data.error) return;
+
+            databaseSiswa = data;
+            if (typeof jalankanFilter === "function") {
+                jalankanFilter();
+            }
+        } catch (err) {
+            console.error("Gagal memuat data siswa:", err);
+        }
+    }
+
+    // 3. REALTIME AMBIL & RENDER CHART KECURANGAN
+    async function loadCharts() {
         try {
             const response = await fetch(`${API_URL}?action=stats_kecurangan`);
             const data = await response.json();
@@ -226,21 +256,17 @@
             if (chartIndikator) chartIndikator.destroy();
             if (chartKelas) chartKelas.destroy();
             
-            // --- OLAH WARNA PIE CHART ---
             const labelsPie = Object.keys(data.byIndikator);
             const badColors = ['#f43f5e', '#f59e0b', '#6366f1', '#e11d48', '#8b5cf6'];
             let colorIndex = 0;
             
             const bgColorsPie = labelsPie.map(label => {
-                // Jika label mengandung kata Selesai, paksa warna hijau
                 if (label.toLowerCase().includes("menyelesaikan") || label.toLowerCase().includes("selesai")) {
                     return '#10b981'; 
                 }
-                // Jika kecurangan, beri warna merah/kuning/ungu dari array
                 return badColors[colorIndex++ % badColors.length];
             });
 
-            // 1. Render Pie Chart
             chartIndikator = new Chart(document.getElementById('chartIndikator'), {
                 type: 'pie',
                 data: {
@@ -252,7 +278,6 @@
                 }
             });
 
-            // 2. Olah Data untuk Chart Rincian Stacked Bar
             const labelSesi = Object.keys(data.rincianSesi);
             const dataSelesai = labelSesi.map(key => data.rincianSesi[key].selesai);
             const dataCurang = labelSesi.map(key => data.rincianSesi[key].curang);
@@ -262,18 +287,8 @@
                 data: {
                     labels: labelSesi,
                     datasets: [
-                        {
-                            label: 'Menyelesaikan Ujian',
-                            data: dataSelesai,
-                            backgroundColor: '#10b981', // Hijau
-                            stack: 'Stack 0',
-                        },
-                        {
-                            label: 'Diblokir / Curang',
-                            data: dataCurang,
-                            backgroundColor: '#f43f5e', // Merah
-                            stack: 'Stack 0',
-                        }
+                        { label: 'Menyelesaikan Ujian', data: dataSelesai, backgroundColor: '#10b981', stack: 'Stack 0' },
+                        { label: 'Diblokir / Curang', data: dataCurang, backgroundColor: '#f43f5e', stack: 'Stack 0' }
                     ]
                 },
                 options: { 
@@ -284,41 +299,89 @@
                                 label: function(context) {
                                     const index = context.dataIndex;
                                     const total = dataSelesai[index] + dataCurang[index];
-                                    const value = context.raw;
-                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                    return `${context.dataset.label}: ${value} Siswa (${percentage}%)`;
+                                    return `${context.dataset.label}: ${context.raw} Siswa (${total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0}%)`;
                                 }
                             }
                         }
                     },
-                    scales: { 
-                        x: { stacked: true },
-                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } 
-                    } 
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } 
                 }
             });
         } catch (e) {
             console.error("Gagal memuat chart:", e);
         }
     }
-    
+
+    // 4. LOGIKA AMBIL & TOGGLE LOCK GLOBAL STATUS
+    async function muatStatusGlobal() {
+        try {
+            const response = await fetch(`${API_URL}?action=get_lock_status`);
+            const data = await response.json();
+            isLockedGlobal = data.locked; // true jika dikunci, false jika dibuka
+            renderStatusGlobalUI(isLockedGlobal);
+        } catch (e) {
+            console.error("Gagal memuat status global lock:", e);
+        }
+    }
+
+    async function toggleGlobalLock() {
+        const btn = document.getElementById('btn-global-lock');
+        const badge = document.getElementById('badge-global-lock');
+        
+        // Optimistic UI Update (Ubah warna instan sebelum fetch selesai agar terasa responsif)
+        const targetState = !isLockedGlobal;
+        renderStatusGlobalUI(targetState);
+
+        try {
+            const response = await fetch(`${API_URL}?action=set_lock_status&locked=${targetState}`);
+            const data = await response.json();
+            isLockedGlobal = data.locked;
+            renderStatusGlobalUI(isLockedGlobal);
+        } catch (e) {
+            console.error("Gagal merubah status global lock:", e);
+            renderStatusGlobalUI(isLockedGlobal); // Balikkan ke status semula jika gagal kueri
+            alert("Gagal mengubah status server. Periksa koneksi internet.");
+        }
+    }
+
+    function renderStatusGlobalUI(isLocked) {
+        const btn = document.getElementById('btn-global-lock');
+        const icon = document.getElementById('icon-global-lock');
+        const text = document.getElementById('text-global-lock');
+        const badge = document.getElementById('badge-global-lock');
+
+        if (isLocked) {
+            // Gaya UI saat sistem DIKUNCI GLOBAL (Non-Aktifkan Siswa)
+            btn.className = "w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg bg-rose-600/20 text-rose-400 border border-rose-500/30 transition-all duration-200";
+            icon.className = "fa-solid fa-lock w-5 text-center text-rose-400";
+            text.innerText = "Status: NON-AKTIF";
+            badge.className = "bg-rose-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded uppercase";
+            badge.innerText = "Lock";
+        } else {
+            // Gaya UI saat sistem DIBUKA GLOBAL (Aktifkan Siswa)
+            btn.className = "w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 transition-all duration-200";
+            icon.className = "fa-solid fa-lock-open w-5 text-center text-emerald-400";
+            text.innerText = "Status: AKTIF";
+            badge.className = "bg-emerald-500 text-slate-900 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase";
+            badge.innerText = "Buka";
+        }
+    }
+
     function updateStats(total, token, mapel) {
         document.getElementById('stat-total-ujian').innerText = total;
         document.getElementById('stat-token-aktif').innerText = token || "-";
         document.getElementById('stat-mapel-aktif').innerText = mapel || "-";
     }
 
-    // 3. ROUTER TAB
+    // ROUTER TAB MANAGEMENT
     function switchTab(tabName, iframeUrl = '') {
         const dashboard = document.getElementById('content-dashboard');
         const iframeContainer = document.getElementById('content-ujian-container');
         const iframe = document.getElementById('ujian-iframe');
         
-        // Reset Sidebar Mobile
         const sidebar = document.getElementById('sidebar');
         if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
 
-        // Hide All
         dashboard.classList.add('hidden');
         iframeContainer.classList.add('hidden');
 
@@ -327,7 +390,8 @@
             dashboard.classList.add('block');
             document.getElementById('page-title').innerText = "Dashboard Utama";
             loadDatabaseUjian();
-            loadCharts(); // Panggil grafik
+            loadCharts();
+            muatStatusGlobal();
         } else {
             iframeContainer.classList.remove('hidden');
             iframe.src = iframeUrl;
@@ -335,9 +399,21 @@
         }
     }
 
+    // --- MANAJEMEN TIMER REALTIME TERPADU ---
     window.onload = () => {
+        // Pemuatan data pertama kali saat web dibuka
         loadDatabaseUjian();
+        muatDataSiswa(false);
         loadCharts();
+        muatStatusGlobal();
+
+        // Loop background sync berjalan simultan setiap 10 detik tanpa refresh halaman
+        setInterval(() => {
+            console.log("Melakukan sinkronisasi otomatis di latar belakang...");
+            muatDataSiswa(true); 
+            loadCharts();        
+            muatStatusGlobal(); // Terus sinkronkan status lock jika diubah dari device admin lain
+        }, 10000); 
     };
 </script>
 </body>
