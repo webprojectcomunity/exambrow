@@ -348,11 +348,19 @@ function periksaStatusServer(nis) {
         const inputToken = document.getElementById("token-input");
         const btnLogin = document.getElementById("btn-login-token"); 
 
-        if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
-            // Simpan status blokir secara lokal agar awet saat di-refresh
+        const statusServer = (res.status || "").toString().trim().toLowerCase();
+        const catatanServer = (res.catatan || "").toString().trim().toLowerCase();
+
+        // Validasi berlapis disamakan dengan engine verifikasi token
+        if (
+            statusServer === "tidak aktif" || 
+            statusServer === "terblokir" || 
+            catatanServer.includes("kecurangan") || 
+            catatanServer.includes("selesai") || 
+            catatanServer.includes("habis")
+        ) {
             localStorage.setItem("is_blocked", "true");
             
-            // Kunci komponen input token
             if (inputToken) {
                 inputToken.disabled = true;
                 inputToken.value = "";
@@ -360,9 +368,8 @@ function periksaStatusServer(nis) {
             }
             if (btnLogin) btnLogin.disabled = true;
             
-            alert("Akses Anda sedang dinonaktifkan/diblokir oleh pengawas. Silakan melapor.");
+            alert("Akses Anda sedang dinonaktifkan/diblokir oleh pengawas atau sistem telah mencatat sesi Anda berakhir.");
         } else {
-            // Jika status di sheet adalah "Aktif", bersihkan status blokir lokal
             localStorage.removeItem("is_blocked");
             if (inputToken) {
                 inputToken.disabled = false;
@@ -438,21 +445,31 @@ function verifikasiToken() {
     fetch(`${API_URL}?action=check_status&nis=${nis}`)
     .then(res => res.json())
     .then(res => {
-        // Logika Blokir Umum dari Pengawas
-        if (res.status === "Tidak Aktif" || res.status === "Terblokir") {
+        // NORMALISASI DATA: Ubah ke lowercase dan hapus spasi untuk menghindari bypass typo/kapital
+        const statusServer = (res.status || "").toString().trim().toLowerCase();
+        const catatanServer = (res.catatan || "").toString().trim().toLowerCase();
+
+        // BARIKADE 1: Jika status lembar kerja di sheet terdeteksi tidak diizinkan masuk
+        if (
+            statusServer === "tidak aktif" || 
+            statusServer === "terblokir" || 
+            catatanServer.includes("kecurangan") || 
+            catatanServer.includes("selesai") || 
+            catatanServer.includes("habis")
+        ) {
             localStorage.setItem("is_blocked", "true");
             tampilToken();
-            alert("Gagal masuk. Status Anda terdeteksi tidak aktif atau diblokir.");
+            alert("Gagal masuk! Status Anda terdeteksi tidak aktif, sudah selesai, atau diblokir oleh sistem/pengawas.");
             return;
         }
 
-        // ALGORITMA DOUBLE USER: Jika STATUS = Aktif dan CATATAN = Memulai Ujian (sedang ujian di perangkat lain)
-        if (res.status === "Aktif" && res.catatan === "Memulai Ujian") {
+        // BARIKADE 2: ALGORITMA DOUBLE USER (Siswa sedang aktif murni di perangkat lain)
+        if (statusServer === "aktif" && catatanServer === "memulai ujian") {
             alert(`TOLAK AKSES!\nSiswa dengan NIS: ${nis} dan Nama: ${namaSiswa} terdeteksi sedang AKTIF mengikuti ujian di perangkat/tab lain.\n\nJika ini adalah kesalahan teknis (browser Anda sempat tertutup), silakan lapor ke pengawas untuk mereset status presensi Anda terlebih dahulu.`);
             return;
         }
 
-        // 2. Jika validasi lolos, ambil konfigurasi tautan soal
+        // 2. Jika validasi super ketat lolos, ambil konfigurasi tautan soal
         fetch(`${API_URL}?action=latest&token=${inputToken}&nis=${nis}`)
         .then(res => res.json())
         .then(config => {
@@ -461,7 +478,6 @@ function verifikasiToken() {
                 return;
             }
 
-            // Ambil parameter durasi hasil kalkulasi log waktu dari server
             const durasiMenit = parseInt(config.durasi) || 0;
 
             if (durasiMenit <= 0) {
@@ -470,16 +486,13 @@ function verifikasiToken() {
                 return;
             }
 
-            // Simpan data lembar kerja sementara ke memori global
             linkFormUjianAktif = config.formLink;
             tokenUjianAktif = inputToken;
             sisaWaktuDetik = durasiMenit * 60;
 
-            // Masukkan data teks mapel dan durasi ke dalam Popup Sesi 1
             document.getElementById("modalMapel").innerText = config.mapel || "Mata Pelajaran";
             document.getElementById("modalDurasi").innerText = config.isSusulan ? `${durasiMenit} Menit (Sisa Potongan)` : `${durasiMenit} Menit`;
 
-            // Munculkan kontainer overlay popup melayang (Sesi 1 Aktif)
             document.getElementById("quizModalOverlay").style.setProperty("display", "flex", "important");
             document.getElementById("popupSesi1").style.display = "block";
             document.getElementById("popupSesi2").style.display = "none";
