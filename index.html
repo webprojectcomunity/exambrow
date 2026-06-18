@@ -343,7 +343,17 @@ iframe {
         }
 
         // Jalankan sinkronisasi status tombol toggle saat halaman dimuat
-        sinkronisasiStatusPortal();
+      // Jalankan sinkronisasi secara instan saat halaman pertama kali dimuat
+    sinkronisasiStatusPortal();
+
+    // ENGINE REAL-TIME (POLLING): 
+    // Menjalankan cek status ke server secara otomatis setiap 5 detik (5000 ms) tanpa refresh halaman
+    setInterval(function() {
+        // Jalankan fungsi ini secara real-time hanya jika siswa BELUM masuk ke dalam lembar ujian
+        if (!ujianBerjalan) {
+            sinkronisasiStatusPortal();
+        }
+    }, 5000);
 
         // Ambil parameter konfigurasi terbaru dari server
         fetch(API_URL + "?action=latest")
