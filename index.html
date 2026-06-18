@@ -293,6 +293,47 @@ iframe {
         }, 300);
     }
 
+    // --- 🔥 FUNGSI SINKRONISASI TOMBOL TOGEL DASHBOARD REAL-TIME ---
+    async function sinkronisasiStatusPortal() {
+        const inputToken = document.getElementById("token-input"); 
+        const btnLogin = document.getElementById("btn-login-token"); 
+
+        try {
+            const response = await fetch(`${API_URL}?action=get_lock_status`);
+            const data = await response.json();
+
+            if (data.locked) { 
+                IS_LOCKED_GLOBAL = true;
+                if (inputToken) {
+                    inputToken.disabled = true;
+                    inputToken.value = "";
+                    inputToken.placeholder = "Sesi ujian dinonaktifkan oleh pengawas...";
+                    inputToken.classList.add("bg-gray-200", "cursor-not-allowed", "opacity-60");
+                }
+                if (btnLogin) {
+                    btnLogin.disabled = true;
+                    btnLogin.classList.add("opacity-50", "cursor-not-allowed");
+                }
+            } else {
+                IS_LOCKED_GLOBAL = false;
+                // Hanya buka kunci form jika siswa tersebut secara personal TIDAK diblokir
+                if (localStorage.getItem("is_blocked") !== "true") {
+                    if (inputToken) {
+                        inputToken.disabled = false;
+                        inputToken.placeholder = "Masukkan Token Ujian";
+                        inputToken.classList.remove("bg-gray-200", "cursor-not-allowed", "opacity-60");
+                    }
+                    if (btnLogin) {
+                        btnLogin.disabled = false;
+                        btnLogin.classList.remove("opacity-50", "cursor-not-allowed");
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Gagal mengambil status sinkronisasi:", error);
+        }
+    }
+
     // --- METHOD: LOAD CONFIG UTAMA & CEK STATUS BLOKIR ---
     window.addEventListener("DOMContentLoaded", function () {
         const cachedBg = localStorage.getItem("cached_background");
@@ -301,13 +342,24 @@ iframe {
             document.body.style.backgroundSize = "cover";
         }
 
+        // Jalankan sinkronisasi status tombol toggle saat halaman dimuat
+        sinkronisasiStatusPortal();
+
         // Ambil parameter konfigurasi terbaru dari server
         fetch(API_URL + "?action=latest")
         .then(res => res.json())
         .then(data => {
-            // Jika saat load awal server sudah mengirimkan error (misal toggle non-aktif)
-            if (data.error) {
-                console.warn("Kondisi Server Saat Ini:", data.error);
+            // Intersepsi jika tombol toggle mati semenjak awal/refresh halaman
+            if (data.error && (data.error === "GLOBAL_LOCKED" || data.error.includes("dinonaktifkan"))) {
+                console.warn("Kondisi Server Saat Ini Terkunci Global");
+                const inputToken = document.getElementById("token-input");
+                const btnLogin = document.getElementById("btn-login-token");
+                if (inputToken) {
+                    inputToken.disabled = true;
+                    inputToken.placeholder = "Sesi ujian dinonaktifkan oleh pengawas...";
+                }
+                if (btnLogin) btnLogin.disabled = true;
+                return;
             }
 
             VALID_TOKEN = (data.token || "").toString().trim().replace(/\s+/g, "").toLowerCase();
@@ -379,11 +431,14 @@ iframe {
                 alert("Akses Anda sedang dinonaktifkan/diblokir oleh pengawas atau sistem telah mencatat sesi Anda berakhir.");
             } else {
                 localStorage.removeItem("is_blocked");
-                if (inputToken) {
-                    inputToken.disabled = false;
-                    inputToken.placeholder = "Masukkan Token Ujian";
+                // Hanya kembalikan ke normal jika status global lock dashboard sedang terbuka (false)
+                if (!IS_LOCKED_GLOBAL) {
+                    if (inputToken) {
+                        inputToken.disabled = false;
+                        inputToken.placeholder = "Masukkan Token Ujian";
+                    }
+                    if (btnLogin) btnLogin.disabled = false;
                 }
-                if (btnLogin) btnLogin.disabled = false;
             }
         })
         .catch(err => console.error("Gagal memeriksa status siswa:", err));
@@ -408,6 +463,7 @@ iframe {
         periksaStatusServer(nis); 
     }
 
+    // --- METHOD: TAMPIL IDENTITAS ---
     function tampilToken() {
         document.getElementById("identitas-box").style.display = "none";
         document.getElementById("login-container").style.display = "block";
@@ -417,11 +473,11 @@ iframe {
             "<strong>NIS:</strong> " + localStorage.getItem("nis") + "<br>" +
             "<strong>Kelas:</strong> " + localStorage.getItem("kelas");
             
-        if (localStorage.getItem("is_blocked") === "true") {
+        if (localStorage.getItem("is_blocked") === "true" || IS_LOCKED_GLOBAL) {
             const inputToken = document.getElementById("token-input");
             if (inputToken) {
                 inputToken.disabled = true;
-                inputToken.placeholder = "AKSES DIKUNCI - HUBUNGI PENGAWAS";
+                inputToken.placeholder = IS_LOCKED_GLOBAL ? "Sesi ujian dinonaktifkan oleh pengawas..." : "AKSES DIKUNCI - HUBUNGI PENGAWAS";
             }
         }
     }
@@ -478,9 +534,12 @@ iframe {
             .then(res => res.json())
             .then(config => {
                 
-                // 🔥 KUNCI UTAMA: Jika server mengembalikan properti '.error' (Sesi ditutup / Checkbox FALSE)
+                // 🔥 KUNCI UTAMA: Jika server mengembalikan properti '.error' (Bisa berupa pesan kunci spesifik token maupun global)
                 if (config.error) {
-                    alert(config.error); // Menampilkan pesan penolakan dinamis dari server Anda
+                    alert(config.error === "GLOBAL_LOCKED" ? config.message : config.error);
+                    if (config.error === "GLOBAL_LOCKED" || config.error.includes("dinonaktifkan")) {
+                        sinkronisasiStatusPortal(); // Kunci form secara visual secara paksa
+                    }
                     return; // ↩️ STOP PROSES DISINI! Menggagalkan penampilan popup/redirect ujian.
                 }
 
@@ -730,6 +789,8 @@ iframe {
         formData.append("nis", localStorage.getItem("nis"));
         formData.append("nama", localStorage.getItem("nama"));
         formData.append("alasan", "Kecurangan Layar Ganda / Split-Screen / Kehilangan Fokus Berulang");
+        formData.append("sisa_waktu", teksSisaWaktu);
+
         formData.append("sisa_waktu", teksSisaWaktu);
 
         fetch(API_URL, { method: "POST", body: formData })
