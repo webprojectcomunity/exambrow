@@ -29,6 +29,22 @@
 
         h2, h3 { text-align: center; color: #333; margin-top: 0; }
 
+        /* Top Nav Menu / Theme Button Bar */
+        .top-nav {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+        .theme-menu-btn {
+            background: #6f42c1;
+            color: white;
+            width: auto;
+            padding: 8px 16px;
+            font-size: 13px;
+            margin-top: 0;
+        }
+        .theme-menu-btn:hover { background: #5a32a3; }
+
         /* Form Layout */
         .form-group { margin-bottom: 12px; }
         label { font-size: 13px; font-weight: bold; color: #444; display: block; margin-bottom: 4px; }
@@ -61,12 +77,62 @@
         .delete { background: #dc3545; color: white; }
         .bg-pasang { background: #17a2b8; color: white; }
         .bg-hapus { background: #6c757d; color: white; }
+
+        /* MODAL GALERI THEME / BACKGROUND */
+        #themeModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+        .theme-modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .gallery-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f8f9fa;
+            text-align: center;
+            padding: 8px;
+        }
+        .gallery-img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+        }
+        .gallery-img:hover { opacity: 0.8; }
     </style>
 </head>
 
 <body>
 
 <div class="container">
+    <!-- TOMBOL MENU THEME KHUSUS -->
+    <div class="top-nav">
+        <button class="theme-menu-btn" onclick="bukaModalTheme()">🎨 Theme / Kelola Background</button>
+    </div>
+
     <h2>Admin Panel</h2>
 
     <!-- FORM UTAMA DOKUMEN / TEKS UJIAN -->
@@ -121,12 +187,29 @@
     </div>
 </div>
 
+<!-- MODAL HALAMAN THEME / GALERI BACKGROUND -->
+<div id="themeModal">
+    <div class="theme-modal-content">
+        <h3 style="color: #6f42c1; margin-bottom: 5px;">Galeri Background (Theme Manager)</h3>
+        <p style="font-size: 12px; color: #666; text-align: center; margin-top: 0;">Pilih salah satu gambar background yang tersedia di bawah ini untuk dipasang ke baris ujian tertentu.</p>
+        <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
+        
+        <div id="galleryContainer" class="gallery-grid">
+            <p style="grid-column: 1 / -1; text-align: center; color: #666;">Memuat galeri background...</p>
+        </div>
+
+        <hr style="border:0; border-top:1px solid #eee; margin: 20px 0 15px 0;">
+        <button onclick="tutupModalTheme()" style="background: #6c757d; width: 100%;">Tutup Galeri</button>
+    </div>
+</div>
+
 <script>
 // URL Web App Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
 let base64Image = "";
 let editRow = null;
+let globalDataList = []; // Menyimpan data konfigurasi aktif untuk galeri theme
 
 // ================= AMBIL DATA UTAMA DARI SERVER =================
 async function loadData() {
@@ -144,12 +227,14 @@ async function loadData() {
 
         if (data.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="6">Belum ada data konfigurasi ujian di server.</td></tr>`;
+            globalDataList = [];
             return;
         }
 
+        globalDataList = data; // Simpan cache data untuk digunakan di galeri theme
         tableBody.innerHTML = "";
+
         data.forEach(item => {
-            // Widget Fasilitas Background Terpisah per Baris
             const bgManagementUI = `
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                     ${item.background 
@@ -182,6 +267,131 @@ async function loadData() {
         console.error(err);
         tableBody.innerHTML = `<tr><td colspan="6" style="color:red;">Gagal memuat data. Periksa koneksi internet / izin Web App.</td></tr>`;
     }
+}
+
+// ================= FUNGSI KONTROL MENU THEME MODAL =================
+function bukaModalTheme() {
+    const modal = document.getElementById("themeModal");
+    modal.style.display = "flex";
+    renderGaleriBackground();
+}
+
+function tutupModalTheme() {
+    const modal = document.getElementById("themeModal");
+    modal.style.display = "none";
+}
+
+// Render daftar background unik yang sudah diunggah di server
+function renderGaleriBackground() {
+    const container = document.getElementById("galleryContainer");
+    if (!container) return;
+
+    // Filter baris yang memiliki background
+    const listBg = globalDataList.filter(item => item.background && item.background.trim() !== "");
+
+    if (listBg.length === 0) {
+        container.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: #666; font-style: italic;">Belum ada file background tersimpan di server. Silakan unggah background melalui tabel utama terlebih dahulu.</p>`;
+        return;
+    }
+
+    container.innerHTML = "";
+    listBg.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "gallery-card";
+        card.innerHTML = `
+            <img src="${item.background}" class="gallery-img" alt="Theme BG" title="Klik untuk pasang ke mapel" onclick="pilihBackgroundKeBaris('${item.background}')">
+            <div style="font-size: 11px; font-weight: bold; color: #333; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.mapel}</div>
+            <div style="font-size: 10px; color: #777;">Baris ke-${item.row}</div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Aksi interaktif ketika gambar di galeri theme diklik untuk dipasang ke baris tertentu
+async function pilihBackgroundKeBaris(urlBackground) {
+    if (globalDataList.length === 0) {
+        alert("Tidak ada data baris ujian aktif.");
+        return;
+    }
+
+    // Buat daftar pilihan baris ujian untuk dipasangi background ini
+    let pilihanTeks = "Pilih baris ujian (Mapel) yang ingin dipasangi background ini:\n\n";
+    globalDataList.forEach(item => {
+        pilihanTeks += `[ Baris ${item.row} ] - ${item.mapel} (Token: ${item.token})\n`;
+    });
+
+    let inputRow = prompt(pilihanTeks + "\nMasukkan angka Baris target:");
+    if (!inputRow) return;
+
+    let targetRow = parseInt(inputRow.trim());
+    const validRow = globalDataList.find(i => i.row === targetRow);
+
+    if (!validRow) {
+        alert("Nomor baris tidak valid atau tidak ditemukan di daftar ujian aktif!");
+        return;
+    }
+
+    if (!confirm(`Pasang background terpilih ke Mapel: ${validRow.mapel} (Baris ${targetRow})?`)) {
+        return;
+    }
+
+    // Kirim request ke backend untuk menimpa/mengganti background baris target menggunakan URL yang sudah ada
+    const payload = {
+        action: "upload_bg_url", // Atau gunakan action upload_bg dengan data string URL
+        row: targetRow,
+        image_url: urlBackground
+    };
+
+    // Alternatif jika backend menggunakan action upload_bg berbasis base64, 
+    // kita fetch gambar tersebut atau gunakan trik update langsung via kode gs.
+    // Agar lebih kompatibel dengan handler backend yang ada, kita update lewat set value langsung atau fetch ulang:
+    
+    try {
+        // Karena backend sudah memiliki handler upload_bg via string base64, 
+        // kita bisa langsung mengirim perintah khusus atau memanfaatkan endpoint update string kolom F.
+        // Mari kita buat penyesuaian sederhana dengan mengirim fetch update kolom F langsung via action khusus atau tambahkan di gs jika perlu, 
+        // atau gunakan fungsi upload_bg dengan mengambil data base64 via canvas (jika gambar dapat di-fetch).
+        
+        // Cara paling aman & instan tanpa ubah backend gs: Ambil gambar dari URL, convert ke base64 secara lokal, lalu kirim ke action upload_bg!
+        const base64Converted = await getBase64FromImageUrl(urlBackground);
+        
+        const responsePayload = {
+            action: "upload_bg",
+            row: targetRow,
+            image: base64Converted
+        };
+
+        const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(responsePayload)
+        });
+
+        const result = await res.text();
+        if (result.includes("SUCCESS")) {
+            alert(`Berhasil memasang background ke ${validRow.mapel} (Baris ${targetRow})!`);
+            tutupModalTheme();
+            loadData();
+        } else {
+            alert("Gagal memperbarui background: " + result);
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Gagal memproses gambar background dari server.");
+    }
+}
+
+// Helper utility untuk convert URL gambar galeri ke base64 (agar kompatibel penuh dengan fungsi backend upload_bg)
+async function getBase64FromImageUrl(url) {
+    const data = await fetch(url);
+    const blob = await data.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 }
 
 // ================= PREVIEW & AUTO COMPRESS GAMBAR (LOKAL) =================
@@ -226,7 +436,7 @@ document.getElementById("bgFile").addEventListener("change", function(e){
     reader.readAsDataURL(file);
 });
 
-// ================= SIMPAN / UPDATE TEKS DATA MURNI (TANPA TERIKAT GAMBAR) =================
+// ================= SIMPAN / UPDATE TEKS DATA MURNI =================
 async function simpanDataTeks() {
     const formLink = document.getElementById("formLink").value.trim();
     const token = document.getElementById("token").value.trim();
@@ -242,14 +452,13 @@ async function simpanDataTeks() {
     btnSimpan.disabled = true;
     btnSimpan.innerText = "Memproses...";
 
-    // Payload murni data teks (opsional melampirkan gambar jika dipilih di input file saat tambah baru)
     const payload = {
         action: editRow ? "update_text" : "add",
         formLink: formLink,
         token: token,
         mapel: mapel,
         durasi: durasi,
-        image: editRow ? "" : base64Image // Hanya sertakan gambar saat input baru pertama kali
+        image: editRow ? "" : base64Image
     };
     
     if (editRow) {
@@ -349,7 +558,6 @@ async function prosesUploadBgKhusus(row) {
         if (textResult.includes("SUCCESS")) {
             alert(`Sukses mengunggah background untuk baris ${row}!`);
             
-            // Bersihkan bidang input gambar setelah berhasil
             base64Image = "";
             const fileInput = document.getElementById("bgFile");
             if (fileInput) fileInput.value = "";
