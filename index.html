@@ -316,7 +316,6 @@ iframe {
                 }
             } else {
                 IS_LOCKED_GLOBAL = false;
-                // Hanya buka kunci form jika siswa tersebut secara personal TIDAK diblokir
                 if (localStorage.getItem("is_blocked") !== "true") {
                     if (inputToken) {
                         inputToken.disabled = false;
@@ -336,30 +335,20 @@ iframe {
 
     // --- METHOD: LOAD CONFIG UTAMA & CEK STATUS BLOKIR ---
     window.addEventListener("DOMContentLoaded", function () {
-        const cachedBg = localStorage.getItem("cached_background");
-        if (cachedBg) {
-            document.body.style.background = `url(${cachedBg}) no-repeat center center fixed`;
-            document.body.style.backgroundSize = "cover";
-        }
+        // Sinkronisasi status portal secara instan
+        sinkronisasiStatusPortal();
 
-        // Jalankan sinkronisasi status tombol toggle saat halaman dimuat
-      // Jalankan sinkronisasi secara instan saat halaman pertama kali dimuat
-    sinkronisasiStatusPortal();
+        // Engine Polling Status Portal
+        setInterval(function() {
+            if (!ujianBerjalan) {
+                sinkronisasiStatusPortal();
+            }
+        }, 5000);
 
-    // ENGINE REAL-TIME (POLLING): 
-    // Menjalankan cek status ke server secara otomatis setiap 5 detik (5000 ms) tanpa refresh halaman
-    setInterval(function() {
-        // Jalankan fungsi ini secara real-time hanya jika siswa BELUM masuk ke dalam lembar ujian
-        if (!ujianBerjalan) {
-            sinkronisasiStatusPortal();
-        }
-    }, 5000);
-
-        // Ambil parameter konfigurasi terbaru dari server
+        // Ambil parameter konfigurasi terbaru dari server (Tanpa memuat background di awal)
         fetch(API_URL + "?action=latest")
         .then(res => res.json())
         .then(data => {
-            // Intersepsi jika tombol toggle mati semenjak awal/refresh halaman
             if (data.error && (data.error === "GLOBAL_LOCKED" || data.error.includes("dinonaktifkan"))) {
                 console.warn("Kondisi Server Saat Ini Terkunci Global");
                 const inputToken = document.getElementById("token-input");
@@ -379,13 +368,8 @@ iframe {
                 document.getElementById("gform-iframe").src = FORM_LINK;
             }
 
-            if (data.background) {
-                if (cachedBg !== data.background) {
-                    document.body.style.background = `url(${data.background}) no-repeat center center fixed`;
-                    document.body.style.backgroundSize = "cover";
-                }
-                localStorage.setItem("cached_background", data.background);
-            }
+            // 🛑 Pemuatan background otomatis di awal telah dikosongkan (menggunakan warna fallback #f4f4f9)
+            document.body.style.background = "#f4f4f9";
 
             DATA_LOADED = true;
             
@@ -441,7 +425,6 @@ iframe {
                 alert("Akses Anda sedang dinonaktifkan/diblokir oleh pengawas atau sistem telah mencatat sesi Anda berakhir.");
             } else {
                 localStorage.removeItem("is_blocked");
-                // Hanya kembalikan ke normal jika status global lock dashboard sedang terbuka (false)
                 if (!IS_LOCKED_GLOBAL) {
                     if (inputToken) {
                         inputToken.disabled = false;
@@ -492,7 +475,7 @@ iframe {
         }
     }
 
-    // --- 🛑 CORE INTEGRATION: VERIFIKASI TOKEN DENGAN CEGATAN TOGEL NON-AKTIF 🛑 ---
+    // --- 🛑 CORE INTEGRATION: VERIFIKASI TOKEN 🛑 ---
     function verifikasiToken() {
         if (!DATA_LOADED) {
             alert("Data server belum siap, mohon tunggu beberapa detik...");
@@ -514,7 +497,6 @@ iframe {
             return;
         }
 
-        // BARIKADE 1: Cek status blacklist / double device terlebih dahulu
         fetch(`${API_URL}?action=check_status&nis=${nis}`)
         .then(res => res.json())
         .then(res => {
@@ -539,18 +521,16 @@ iframe {
                 return;
             }
 
-            // BARIKADE 2: Ambil detail konfigurasi & INTERSEPSI Status Toggle Non-Aktif Server
             fetch(`${API_URL}?action=latest&token=${inputToken}&nis=${nis}`)
             .then(res => res.json())
             .then(config => {
                 
-                // 🔥 KUNCI UTAMA: Jika server mengembalikan properti '.error' (Bisa berupa pesan kunci spesifik token maupun global)
                 if (config.error) {
                     alert(config.error === "GLOBAL_LOCKED" ? config.message : config.error);
                     if (config.error === "GLOBAL_LOCKED" || config.error.includes("dinonaktifkan")) {
-                        sinkronisasiStatusPortal(); // Kunci form secara visual secara paksa
+                        sinkronisasiStatusPortal();
                     }
-                    return; // ↩️ STOP PROSES DISINI! Menggagalkan penampilan popup/redirect ujian.
+                    return;
                 }
 
                 const durasiMenit = parseInt(config.durasi) || 0;
@@ -561,7 +541,16 @@ iframe {
                     return;
                 }
 
-                // Jika aman lolos semua barikade, barulah variabel diisi
+                // 🔥 TERAPKAN BACKGROUND SPESIFIK BERDASARKAN BARIS TOKEN YANG DIMASUKKAN
+                if (config.background) {
+                    document.body.style.background = `url(${config.background}) no-repeat center center fixed`;
+                    document.body.style.backgroundSize = "cover";
+                    localStorage.setItem("cached_background", config.background);
+                } else {
+                    document.body.style.background = "#f4f4f9";
+                    localStorage.removeItem("cached_background");
+                }
+
                 linkFormUjianAktif = config.formLink;
                 tokenUjianAktif = inputToken;
                 sisaWaktuDetik = durasiMenit * 60;
@@ -799,8 +788,6 @@ iframe {
         formData.append("nis", localStorage.getItem("nis"));
         formData.append("nama", localStorage.getItem("nama"));
         formData.append("alasan", "Kecurangan Layar Ganda / Split-Screen / Kehilangan Fokus Berulang");
-        formData.append("sisa_waktu", teksSisaWaktu);
-
         formData.append("sisa_waktu", teksSisaWaktu);
 
         fetch(API_URL, { method: "POST", body: formData })
