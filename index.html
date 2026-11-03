@@ -335,6 +335,13 @@ iframe {
 
     // --- METHOD: LOAD CONFIG UTAMA & CEK STATUS BLOKIR ---
     window.addEventListener("DOMContentLoaded", function () {
+        // Cek cache lokal terlebih dahulu agar background langsung tampil tanpa jeda
+        const cachedBg = localStorage.getItem("cached_background");
+        if (cachedBg) {
+            document.body.style.background = `url(${cachedBg}) no-repeat center center fixed`;
+            document.body.style.backgroundSize = "cover";
+        }
+
         // Sinkronisasi status portal secara instan
         sinkronisasiStatusPortal();
 
@@ -345,7 +352,7 @@ iframe {
             }
         }, 5000);
 
-        // Ambil parameter konfigurasi terbaru dari server (Tanpa memuat background di awal)
+        // Ambil parameter konfigurasi terbaru dari server
         fetch(API_URL + "?action=latest")
         .then(res => res.json())
         .then(data => {
@@ -368,8 +375,14 @@ iframe {
                 document.getElementById("gform-iframe").src = FORM_LINK;
             }
 
-            // 🛑 Pemuatan background otomatis di awal telah dikosongkan (menggunakan warna fallback #f4f4f9)
-            document.body.style.background = "#f4f4f9";
+            // Tampilkan background otomatis dari server saat halaman dimuat[cite: 1, 7]
+            if (data.background) {
+                document.body.style.background = `url(${data.background}) no-repeat center center fixed`;
+                document.body.style.backgroundSize = "cover";
+                localStorage.setItem("cached_background", data.background);
+            } else if (!cachedBg) {
+                document.body.style.background = "#f4f4f9";
+            }
 
             DATA_LOADED = true;
             
@@ -380,7 +393,6 @@ iframe {
         })
         .catch(err => {
             console.error("Gagal sinkronisasi data:", err);
-            alert("Gagal mengambil data dari server! Periksa kembali jaringan internet.");
         });
 
         const nama = localStorage.getItem("nama");
@@ -541,7 +553,7 @@ iframe {
                     return;
                 }
 
-                // 🔥 TERAPKAN BACKGROUND SPESIFIK BERDASARKAN BARIS TOKEN YANG DIMASUKKAN
+                // 🔥 TERAPKAN BACKGROUND SPESIFIK BERDASARKAN BARIS TOKEN YANG DIMASUKKAN[cite: 1]
                 if (config.background) {
                     document.body.style.background = `url(${config.background}) no-repeat center center fixed`;
                     document.body.style.backgroundSize = "cover";
