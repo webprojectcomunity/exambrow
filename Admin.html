@@ -19,10 +19,10 @@
 
         .container {
             background: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 10px;
             width: 100%;
-            max-width: 1000px;
+            max-width: 1050px;
             margin: 0 auto;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
@@ -34,27 +34,33 @@
         label { font-size: 13px; font-weight: bold; color: #444; display: block; margin-bottom: 4px; }
         input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
 
-        /* Responsif: Kolom menjadi vertikal di layar kecil */
+        /* Responsif: Kolom bertumpuk di layar kecil */
         .row-inputs { display: flex; flex-direction: column; gap: 10px; }
+        @media (min-width: 600px) {
+            .row-inputs { flex-direction: row; }
+            .row-inputs .form-group { flex: 1; }
+        }
 
         /* Tombol */
-        button { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; margin-top: 5px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; margin-top: 5px; transition: 0.2s; }
         .save-btn { background: #007bff; color: white; }
         .cancel-btn { background: #6c757d; color: white; display: none; }
 
-        /* Manajemen Background */
+        /* Preview Background Form */
         .bg-management-box { border: 1px solid #ddd; padding: 12px; border-radius: 8px; background: #fafafa; margin: 15px 0; }
         .preview { width: 100%; height: 120px; background-size: cover; background-position: center; border-radius: 6px; margin-top: 10px; border: 1px dashed #ccc; background-color: #eee; }
 
         /* Tabel Responsif dengan Scroll */
         .table-container { width: 100%; overflow-x: auto; margin-top: 20px; border: 1px solid #ddd; border-radius: 6px; }
-        table { width: 100%; min-width: 500px; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #eee; padding: 8px; text-align: center; }
+        table { width: 100%; min-width: 650px; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #eee; padding: 10px 8px; text-align: center; vertical-align: middle; }
         th { background-color: #f8f9fa; }
         
-        .action-btn { padding: 5px 8px; font-size: 11px; margin: 1px; border-radius: 4px; }
-        .edit { background: #ffc107; }
+        .action-btn { padding: 6px 10px; font-size: 11px; margin: 2px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+        .edit { background: #ffc107; color: #000; }
         .delete { background: #dc3545; color: white; }
+        .bg-pasang { background: #17a2b8; color: white; }
+        .bg-hapus { background: #6c757d; color: white; }
     </style>
 </head>
 
@@ -63,6 +69,7 @@
 <div class="container">
     <h2>Admin Panel</h2>
 
+    <!-- FORM UTAMA DOKUMEN / TEKS UJIAN -->
     <div class="form-group">
         <label>Link Google Form</label>
         <input type="text" id="formLink" placeholder="Link Form...">
@@ -84,14 +91,15 @@
         </div>
     </div>
 
+    <!-- WIDGET PICKER FILE BACKGROUND -->
     <div class="bg-management-box">
-        <label>File Background</label>
+        <label>Pilih File Background (Untuk Diunggah / Diganti via Tabel)</label>
         <input type="file" id="bgFile" accept="image/*">
         <div class="preview" id="preview"></div>
     </div>
 
-    <button class="save-btn" onclick="simpanDataTeks()">Simpan Data</button>
-    <button class="cancel-btn" id="btnBatal">Batal</button>
+    <button class="save-btn" id="btnSimpan" onclick="simpanDataTeks()">Simpan Data Baru</button>
+    <button class="cancel-btn" id="btnBatal" onclick="resetForm()">Batal</button>
 
     <h3>Data Ujian Aktif</h3>
     <div class="table-container">
@@ -102,8 +110,8 @@
                     <th>Durasi</th>
                     <th>Token</th>
                     <th>Link</th>
-                    <th>BG</th>
-                    <th>Aksi</th>
+                    <th>Background</th>
+                    <th>Aksi Teks</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -114,7 +122,7 @@
 </div>
 
 <script>
-// URL Web App dari Google Apps Script
+// URL Web App Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbygo9uVEhnY6M8QefD7HEQV57DWTZOE3ACPQhl6b80lvzxGuliQULaE5yKG_guqoDdyPQ/exec";
 
 let base64Image = "";
@@ -141,23 +149,30 @@ async function loadData() {
 
         tableBody.innerHTML = "";
         data.forEach(item => {
-            const bgDisplay = item.background 
-                ? `<a href="${item.background}" target="_blank"><img src="${item.background}" alt="BG" style="max-width:50px; max-height:50px; border-radius:4px;"></a>` 
-                : `<span style="color:#999; font-style:italic;">Default</span>`;
+            // Widget Fasilitas Background Terpisah per Baris
+            const bgManagementUI = `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                    ${item.background 
+                        ? `<a href="${item.background}" target="_blank"><img src="${item.background}" alt="BG" style="width:42px; height:42px; object-fit:cover; border-radius:4px; border:1px solid #ccc;"></a>` 
+                        : `<span style="color:#999; font-style:italic; font-size:11px;">Default</span>`
+                    }
+                    <div style="display: flex; gap: 3px; margin-top: 2px;">
+                        <button class="action-btn bg-pasang" onclick="prosesUploadBgKhusus(${item.row})" title="Pasang/Ganti Background Baris Ini">Pasang BG</button>
+                        <button class="action-btn bg-hapus" onclick="hapusBgKhusus(${item.row})" title="Kosongkan Background Baris Ini">Kosongkan BG</button>
+                    </div>
+                </div>
+            `;
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td><strong>${item.mapel}</strong></td>
-                <td>${item.durasi}</td>
+                <td>${item.durasi} Menit</td>
                 <td><code style="background:#eee; padding:2px 6px; border-radius:4px; font-weight:bold;">${item.token}</code></td>
-                <td style="font-size:11px; color:#555;">${item.formLink}</td>
-                <td>${bgDisplay}</td>
+                <td style="font-size:11px; color:#555; max-width:180px; word-break:break-all;">${item.formLink}</td>
+                <td>${bgManagementUI}</td>
                 <td>
                     <button class="action-btn edit" onclick="masukModeEdit(${item.row}, '${btoa(encodeURIComponent(item.mapel))}', '${btoa(encodeURIComponent(item.durasi))}', '${btoa(encodeURIComponent(item.token))}', '${btoa(encodeURIComponent(item.formLink))}')">Edit Teks</button>
                     <button class="action-btn delete" onclick="hapusBarisTotal(${item.row})">Hapus</button>
-                    <hr style="border:0; border-top:1px dashed #ccc; margin:4px 0;">
-                    <button class="action-btn bg-upload" onclick="prosesUploadBgKhusus(${item.row})">Pasang BG</button>
-                    <button class="action-btn bg-delete" onclick="hapusBgKhusus(${item.row})">Kosongkan BG</button>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -211,7 +226,7 @@ document.getElementById("bgFile").addEventListener("change", function(e){
     reader.readAsDataURL(file);
 });
 
-// ================= EKSEKUSI DATA TEKS (SIMPAN / UPDATE) =================
+// ================= SIMPAN / UPDATE TEKS DATA MURNI (TANPA TERIKAT GAMBAR) =================
 async function simpanDataTeks() {
     const formLink = document.getElementById("formLink").value.trim();
     const token = document.getElementById("token").value.trim();
@@ -227,14 +242,14 @@ async function simpanDataTeks() {
     btnSimpan.disabled = true;
     btnSimpan.innerText = "Memproses...";
 
-    // 🔥 PERBAIKAN: Menggunakan JSON payload & menyertakan 'image' langsung saat 'add'
+    // Payload murni data teks (opsional melampirkan gambar jika dipilih di input file saat tambah baru)
     const payload = {
         action: editRow ? "update_text" : "add",
         formLink: formLink,
         token: token,
         mapel: mapel,
         durasi: durasi,
-        image: base64Image // Sekarang otomatis terikut saat klik tombol utama
+        image: editRow ? "" : base64Image // Hanya sertakan gambar saat input baru pertama kali
     };
     
     if (editRow) {
@@ -244,13 +259,13 @@ async function simpanDataTeks() {
     try {
         const res = await fetch(API_URL, { 
             method: "POST", 
-            headers: { "Content-Type": "text/plain;charset=utf-8" }, // Menghindari isu CORS preflight di GAS
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload) 
         });
         const result = await res.text();
 
         if (result.includes("SUCCESS")) {
-            alert(editRow ? "Data teks berhasil diperbarui!" : "Konfigurasi ujian baru & background berhasil disimpan!");
+            alert(editRow ? "Data teks berhasil diperbarui!" : "Konfigurasi ujian baru berhasil disimpan!");
             resetForm();
             loadData();
         } else {
@@ -283,7 +298,7 @@ function masukModeEdit(row, mapelB64, durasiB64, tokenB64, formLinkB64) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= TERPISAH: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
+// ================= LOGIKA KHUSUS: UPLOAD/UPDATE BACKGROUND BARIS SPESIFIK =================
 async function prosesUploadBgKhusus(row) {
     try {
         if (!row || isNaN(row)) {
@@ -292,7 +307,7 @@ async function prosesUploadBgKhusus(row) {
         }
 
         if (!base64Image || typeof base64Image !== "string") {
-            alert("Pilih file gambar terlebih dahulu melalui input file!");
+            alert("Silakan pilih file gambar terlebih dahulu melalui bidang 'Pilih File Background'!");
             return;
         }
 
@@ -302,22 +317,13 @@ async function prosesUploadBgKhusus(row) {
             return;
         }
 
-        if (!confirm(`Apakah Anda yakin ingin upload background ke baris ${row}?`)) {
+        if (!confirm(`Apakah Anda yakin ingin memasang background ini untuk baris ${row}?`)) {
             return;
-        }
-
-        const btnSimpan = document.getElementById("btnSimpan");
-        const originalText = btnSimpan ? btnSimpan.innerText : "Simpan Data Baru";
-        
-        if (btnSimpan) {
-            btnSimpan.disabled = true;
-            btnSimpan.innerText = "Mengunggah Gambar...";
         }
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 60000);
 
-        // 🔥 PERBAIKAN: Menggunakan JSON payload agar data base64 stabil dan utuh
         const payload = {
             action: "upload_bg",
             row: row,
@@ -343,6 +349,7 @@ async function prosesUploadBgKhusus(row) {
         if (textResult.includes("SUCCESS")) {
             alert(`Sukses mengunggah background untuk baris ${row}!`);
             
+            // Bersihkan bidang input gambar setelah berhasil
             base64Image = "";
             const fileInput = document.getElementById("bgFile");
             if (fileInput) fileInput.value = "";
@@ -354,19 +361,8 @@ async function prosesUploadBgKhusus(row) {
             alert("Gagal upload. Respon server: " + textResult);
         }
 
-        if (btnSimpan) {
-            btnSimpan.disabled = false;
-            btnSimpan.innerText = originalText;
-        }
-
     } catch (err) {
         console.error("UPLOAD ERROR:", err);
-        const btnSimpan = document.getElementById("btnSimpan");
-        if (btnSimpan) {
-            btnSimpan.disabled = false;
-            btnSimpan.innerText = "Simpan Data Baru";
-        }
-
         if (err.name === "AbortError") {
             alert("Upload timeout! Server Google Apps Script memakan waktu terlalu lama (lebih dari 60 detik).");
         } else {
@@ -375,9 +371,9 @@ async function prosesUploadBgKhusus(row) {
     }
 }
 
-// ================= KOSONGKAN BACKGROUND BARIS DATA =================
+// ================= LOGIKA KHUSUS: KOSONGKAN BACKGROUND BARIS SPESIFIK =================
 async function hapusBgKhusus(row) {
-    if (!confirm(`Apakah Anda yakin ingin menghapus file background pada baris ${row} dan mengembalikannya ke default?`)) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus background pada baris ${row} dan mengembalikannya ke default?`)) return;
 
     const payload = { action: "delete_bg", row: row };
 
